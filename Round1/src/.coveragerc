@@ -1,0 +1,9 @@
+[run]
+branch = True
+include =
+    fsa/*
+    tasks/good_ai/*
+
+[report]
+skip_covered = True
+sort = Cover
