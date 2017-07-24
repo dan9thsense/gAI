@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
-class Agent99():
+class Agent():
     def __init__(self, learningRate, numberOfStates, numberOfActions):
         #These lines established the feed-forward part of the network. The agent takes a state and produces an action.
         self.state_in= tf.placeholder(shape=[1],dtype=tf.int32)
@@ -24,9 +24,11 @@ class Agent99():
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=learningRate)
         self.update = optimizer.minimize(self.loss)
 
-class simpleAgent99(Responder):
+class simpleAgent(Responder):
     def __init__(self):
       Responder.__init__(self)
+      
+    def createGraph(self):
       
       #Clear the default graph stack and reset the global default graph.
       tf.reset_default_graph()
@@ -34,30 +36,31 @@ class simpleAgent99(Responder):
       #Establish the training proceedure. We feed the reward and chosen action into the network
       #to compute the loss, and use it to update the network.
       
-      self.myAgent99 = Agent99(learningRate=self.learningRate,numberOfStates=self.numStates,numberOfActions=self.numActions)
+      self.myAgent = Agent(learningRate=self.learningRate,numberOfStates=self.numStates,numberOfActions=self.numActions)
       
       #The weights we will evaluate to look into the network., Returns all variables created with `trainable=True
-      self.weights99 = tf.trainable_variables()[0] 
+      self.weights = tf.trainable_variables()[0] 
       
       #Variable to call next(..) from the training generator. Calling the generator directly causes it to run from the start
-      self.learner99 = self.runNet()   
+      self.learner = self.runNet()   
     
     def getOutput(self):
       if self.resetCalled:
-        print("running a reset net in agent.py")
         try:
-          next(self.learner99)
+          next(self.learner)
         except StopIteration:
-          print("completed the reset net in agent.py")
+          print("completed a reset net in agent.py")
         self.netWasReset = True        
         self.resetCalled = False
+        
       else:
         if self.netWasReset:
           self.netWasReset = False
-          self.learner99 = self.runNet()
-          return next(self.learner99)
+          print("creating a new tf graph in agent.py")
+          self.createGraph()
+          return next(self.learner)
         else:
-          return next(self.learner99)
+          return next(self.learner)
         
     def runNet(self):
       # Launch the tensorflow graph
@@ -69,7 +72,6 @@ class simpleAgent99(Responder):
           # reset the weights
           print("reset called in agent.py, exiting tf session")
           sess.close()
-          print("session closed in agent.py")
           return
           
         if self.resetVariables:
@@ -82,21 +84,18 @@ class simpleAgent99(Responder):
           self.action = np.random.randint(self.numActions)              
         else:
           # for this state, pick the action with the highest weight
-          self.action = sess.run(self.myAgent99.chosen_action,feed_dict={self.myAgent99.state_in:[self.currentState]})
+          self.action = sess.run(self.myAgent.chosen_action,feed_dict={self.myAgent.state_in:[self.currentState]})
                
         yield self.characters[self.action]
 
         # we freeze here
         # while frozen, the output is sent, a reward is received
-        # and a new state received, which becomes the current state (but we don't use it)
-        # or a reset command is received
-        
-           
-        
+        # and a new state received, which becomes the current state
+                
         #we now have a new current state as well as the reward based on the action we took in the previous state
         #Update the network
-        feed_dict={self.myAgent99.reward_holder:[self.reward],self.myAgent99.action_holder:[self.action],self.myAgent99.state_in:[self.previousState]}
-        _,ww = sess.run([self.myAgent99.update, self.weights99], feed_dict=feed_dict)
+        feed_dict={self.myAgent.reward_holder:[self.reward],self.myAgent.action_holder:[self.action],self.myAgent.state_in:[self.previousState]}
+        _,ww = sess.run([self.myAgent.update, self.weights], feed_dict=feed_dict)
 
       
 

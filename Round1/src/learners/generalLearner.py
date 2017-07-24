@@ -16,7 +16,7 @@ from learners import my_learners
 #from learners import q_learner
 #from learners import q_network
 from learners import q_no_state_policy
-from learners import agent55
+from learners import agent
 from learners import agent77
 
 # when testing stand-alone
@@ -27,7 +27,7 @@ from learners import agent77
 
 class GeneralLearner(BaseLearner):
   def __init__(self):
-    self.enablePlotting = True
+    self.enablePlotting = False
     self.quietCharacter = ' ' # this is the correct response when we get an input that corrects our previous response
     self.inputCharacter = '-'
     self.lastCharacter = '+'
@@ -40,9 +40,9 @@ class GeneralLearner(BaseLearner):
     self.numConsecutiveRewards = 0
     self.numConsecutiveFailures = 0
     self.numFailures = 0
-    self.maxNumFailures = 2000
+    self.maxNumFailures = 200000
     self.numTries = 0
-    self.maxTries = 2000
+    self.maxTries = 200000
     self.learner = my_learners
     self.repeater = self.learner.Repeater()
     self.randomChar = self.learner.RandomCharacter()
@@ -51,13 +51,12 @@ class GeneralLearner(BaseLearner):
     #self.rnn_learner = rnn_learner.myRNN()
     #self.qLearner = q_learner.myQ()
     #self.qLearner = q_network.myQNetwork()
-    self.q_NoState = q_no_state_policy.simpleAgent()
-    self.agent1 = agent55.simpleAgent55()
-    self.agent0 = agent77.simpleAgent77()
+    self.q_NoState = q_no_state_policy.NoStatePolicy()
+    self.agent1 = agent.simpleAgent()
     
     # list of the learners with the max number of allowed failures for each
     # and slots for the number of tasks solved and the number of tasks failed for each
-    self.learnerList = [ [self.agent0, 300, 0, 0, 'agent1'], [self.agent1, 300, 0, 0, 'agent0'],\
+    self.learnerList = [ [self.q_NoState, 71, 0, 0, 'q_NoState'], [self.agent1, 300, 0, 0, 'agent1'],\
       [self.repeater, 3, 0, 0, 'Repeater'], [self.randomChar, 71, 0, 0, 'Random Character'], \
       [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'] ]
     self.learnerIndex = 0

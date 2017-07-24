@@ -40,11 +40,7 @@ class simpleAgent99(Responder):
       self.weights99 = tf.trainable_variables()[0] 
       
       #Variable to call next(..) from the training generator. Calling the generator directly causes it to run from the start
-      self.learner99 = self.runNet()
-      
-    def resetWeights(self):
-      self.resetVariables = True
-    
+      self.learner99 = self.runNet()   
     
     def getOutput(self):
       if self.resetCalled:

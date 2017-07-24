@@ -27,6 +27,9 @@ class Agent55():
 class simpleAgent55(Responder):
     def __init__(self):
       Responder.__init__(self)
+      self.NetWasReset = True
+      
+    def createGraph(self):
       
       #Clear the default graph stack and reset the global default graph.
       tf.reset_default_graph()
@@ -51,10 +54,11 @@ class simpleAgent55(Responder):
           print("completed the reset net in agent.py")
         self.netWasReset = True        
         self.resetCalled = False
+        
       else:
         if self.netWasReset:
           self.netWasReset = False
-          self.learner55 = self.runNet()
+          self.createGraph()
           return next(self.learner55)
         else:
           return next(self.learner55)

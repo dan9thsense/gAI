@@ -27,7 +27,6 @@ class Agent55():
 class simpleAgent55(Responder):
     def __init__(self):
       Responder.__init__(self)
-      self.NetWasReset = True
       
     def createGraph(self):
       
@@ -47,17 +46,17 @@ class simpleAgent55(Responder):
     
     def getOutput(self):
       if self.resetCalled:
-        print("running a reset net in agent.py")
         try:
           next(self.learner55)
         except StopIteration:
-          print("completed the reset net in agent.py")
+          print("completed a reset net in agent.py")
         self.netWasReset = True        
         self.resetCalled = False
         
       else:
         if self.netWasReset:
           self.netWasReset = False
+          print("creating a new tf graph in agent.py")
           self.createGraph()
           return next(self.learner55)
         else:
@@ -73,7 +72,6 @@ class simpleAgent55(Responder):
           # reset the weights
           print("reset called in agent.py, exiting tf session")
           sess.close()
-          print("session closed in agent.py")
           return
           
         if self.resetVariables:
@@ -92,11 +90,8 @@ class simpleAgent55(Responder):
 
         # we freeze here
         # while frozen, the output is sent, a reward is received
-        # and a new state received, which becomes the current state (but we don't use it)
-        # or a reset command is received
-        
-           
-        
+        # and a new state received, which becomes the current state
+                
         #we now have a new current state as well as the reward based on the action we took in the previous state
         #Update the network
         feed_dict={self.myAgent55.reward_holder:[self.reward],self.myAgent55.action_holder:[self.action],self.myAgent55.state_in:[self.previousState]}
