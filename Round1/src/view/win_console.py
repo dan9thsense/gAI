@@ -84,7 +84,7 @@ class WinBaseView(object):
     def print_info(self):
         print('Time {}; Current task: {}; Reward {}.'.format(self.info['time'], self.info['current_task'],
                                                              self.info['reward']))
-
+        
     def initialize(self):
         pass
 

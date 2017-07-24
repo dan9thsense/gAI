@@ -122,6 +122,7 @@ class Environment:
                 # switch to next task immediately if this input caused the task to end
                 # and there is no feedback to output (output_channel is empty)
                 if self._current_task.has_ended() and self._output_channel.is_empty():
+                    print("in environment, self._current_task.has_ended() and self._output_channel.is_empty()")
                     self._switch_new_task()
             # We are in the middle of the task, so no rewards are given
         else:
@@ -129,6 +130,7 @@ class Environment:
             # issue a silence and then return reward and move to next task
             if self._output_channel.is_empty():
                 if self._task_separator_issued or self._should_skip_separator():
+                    print("in environment,self._task_separator_issued or self._should_skip_separator()")
                     # Have nothing more to say
                     # reward the learner if necessary and switch to new task
                     reward = self._reward if self._reward is not None else 0
@@ -289,6 +291,7 @@ class Environment:
             self._task_scheduler.reward(self._result)
             self._result = None
 
+        print("environment is switching to a new task")
         self._current_task = self._task_scheduler.get_next_task()
         try:
             # This is to check whether the user didn't mess up in instantiating

@@ -1,30 +1,12 @@
 # a set of simple responders
 import random
-
-class Responder:
-  def __init__(self):
-    self.characters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', \
-        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', \
-        'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', \
-        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', \
-        ',', '.', '!', ';', '?', '-', ' ']
-    self.specialCharacters = [ ',', '.', '!', ';', '?', '-', ' ' ]
-    self.anCharacters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', \
-        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', \
-        'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', \
-        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-    self.numberCharacters = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' ]
-    self.inputCharacter = '-'
-    self.previousCharacter = '+'
-    self.outputCharacter = '.'
-    self.quietCharacter = ' ' # this is the correct response when we get an input that corrects our previous response
-    
+from responder import Responder
+   
 # this solves microtask A.2.4, Copy input to output    
-class Repeater:
+class Repeater(Responder):
   def rewardIn(self, reward):
-    pass 
+    self.totalReward += reward
+    self.rewardList.append(self.totalReward) 
     
   def charOut(self, charIn):
     self.outputCharacter = charIn
@@ -42,6 +24,8 @@ class RandomCharacter(Responder):
         self.foundCharacter = True
       elif reward == -1:
         self.foundCharacter = False
+      self.totalReward += reward
+      self.rewardList.append(self.totalReward)
 
     def charOut(self, charIn):
       self.inputCharacter = charIn
@@ -54,15 +38,54 @@ class RandomCharacter(Responder):
       
       self.outputCharacter = self.characters[self.characterIndex]
       return self.outputCharacter
+ 
+ 
+# this solves microtask A.2.2,  repeat special characters, otherwise output a particular alphanumeric character    
+class alphaNumeric(Responder):
+    def __init__(self):
+      Responder.__init__(self)      
+      self.characterIndex = -1
+      self.foundCharacter = False
+      self.specialCharacterOutputted = False
       
+    def rewardIn(self, reward):
+      if reward == 1 and (not self.specialCharacterOutputted):
+        self.foundCharacter = True
+      elif reward == -1 and (not self.specialCharacterOutputted):
+        self.foundCharacter = False
+      self.totalReward += reward
+      self.rewardList.append(self.totalReward)
+
+    def charOut(self, charIn):
+      self.inputCharacter = charIn
+      # if the input is a special character, just repeat that character
+      for i in self.specialCharacters:
+        if self.inputCharacter == i:
+          self.outputCharacter = self.inputCharacter
+          self.specialCharacterOutputted = True
+          return self.outputCharacter
+                    
+      # if we were rewarded, then foundCharacter will be true and we want to keep sending the same character
+      # otherwise, move on to the next character
+      if not self.foundCharacter:
+        self.characterIndex += 1
+      if self.characterIndex >= len(self.anCharacters):
+        self.characterIndex = 0
+      
+      self.specialCharacterOutputted = False
+      self.outputCharacter = self.anCharacters[self.characterIndex]
+      return self.outputCharacter 
+
+# this solves A.2.5.1       
 class InputOutputFeedback(Responder):
     def __init__(self):
       Responder.__init__(self)
-      self.reward = 0
       self.correctCharacter = [-1 for x in range(256)]
       
     def rewardIn(self, reward):
       self.reward = reward
+      self.totalReward += reward
+      self.rewardList.append(self.totalReward)
       
     def charOut(self, charIn):
       self.inputCharacter = charIn

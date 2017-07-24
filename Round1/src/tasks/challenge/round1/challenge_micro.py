@@ -35,12 +35,16 @@ class MicroBase(Task):
         '''
         Checks whether the agent solved task instance successfully
         '''
+        if self.under_time_limit_for_successfull_solution() and self.agent_solved_instance():
+          print("agent_solved_instance_under_time_limit")
         return self.under_time_limit_for_successfull_solution() and self.agent_solved_instance()
 
     def agent_solved_instance(self):
         '''
         Checks whether the agent solved task instance
         '''
+        if self.consecutive_reward >= REQUIRED_CONSECUTIVE_REWARDS:
+          print("agent_solved_instance")
         return self.consecutive_reward >= REQUIRED_CONSECUTIVE_REWARDS
 
     def agent_should_know_answers(self):

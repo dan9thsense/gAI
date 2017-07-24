@@ -99,17 +99,20 @@ class ConsecutiveTaskScheduler:
 
     def get_next_task(self):
         if self.reward_count >= self.success_threshold:
+            print("in scheduler, self.reward_count >= self.success_threshold")
             self.reward_count = 0
 
             if os.environ.get('UNIT_TESTS_RUNNING'):
                 self.task_ptr = (self.task_ptr + 1) % len(self.tasks)
             else:
+                print("in scheduler, incrementing task_ptr")
                 self.task_ptr += 1
 
             if self.task_ptr >= len(self.tasks):
                 self.logger.info("Learning finished successfully!")
                 sys.exit() # you can insert some handler code here.
                 return None
+        print("in scheduler, sending new task")
         return self.tasks[self.task_ptr]
 
     def reward(self, reward):
