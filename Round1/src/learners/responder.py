@@ -1,11 +1,12 @@
 # top class for learners
+
 import numpy as np
 import random
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
 class Responder:
-  def __init__(self):     
+  def __init__(self):
     self.characters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', \
         'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', \
@@ -37,24 +38,24 @@ class Responder:
     self.totalReward = 0
     self.rewardList = []
     self.initializeValues()
-            
-              
-  def initializeValues(self): 
+
+
+  def initializeValues(self):
     self.currentState = 0
     self.previousState = 0
     self.reward = 0
     self.action = 0
-    
+
   def resetWeights(self):
     self.resetVariables = True
-       
+
   def rewardIn(self, reward):
     self.reward = reward
     #print("reward received = ", self.reward)
-    self.totalReward += reward      
+    self.totalReward += reward
     if self.recordRewards:
       self.rewardList.append(self.totalReward)
-           
+
   def charOut(self, charIn):
     self.inputCharacter = charIn
     self.previousState = self.currentState
@@ -67,18 +68,18 @@ class Responder:
     self.outputCharacter = self.getOutput()
     #print("character out was = ", self.outputCharacter)
     return self.outputCharacter
-            
+
   def reset(self):
     self.resetCalled = True
     # break out of generator
     self.getOutput()
     self.initializeValues()
-    
+
     #Reduce chance of random action as we train the model.
     if self.numResets < 10000:
       self.numResets += 1
       self.e = self.initialRandomActionProbability/((self.numResets/50) + 10)
-    
+
   def plotReward(self, learnerName):
     if len(self.rewardList) > 2 and self.recordRewards and self.plotResults:
       print("plotting rewardList.  Its length = ", len(self.rewardList))
@@ -89,9 +90,7 @@ class Responder:
       print("not plotting rewardList")
     self.rewardList = []
     self.totalReward = 0
-    
+
   def getOutput(self):
     #override in child classes
     return 0
-
-          

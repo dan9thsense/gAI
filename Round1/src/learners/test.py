@@ -1,8 +1,16 @@
 #import agent
 #my_learner = agent.simpleAgent()
+
+#import q_no_state_policy
+#my_learner = q_no_state_policy.QNoStatePolicy()
+
+#import mdp
+#my_learner = mdp.mdpAgent()
+
 '''
-import q_no_state_policy
-my_learner = q_no_state_policy.QNoStatePolicy()
+import mdpPolicy1
+my_learner = mdpPolicy1.mdpPolicyAgent()
+
 
 output = my_learner.charOut("L")
 print("output = ", output)
@@ -27,4 +35,3 @@ my_learner.rewardIn(-1)
 #print('output received = ', my_learner.charOut('b'))
 #my_learner.reset()
 '''
-

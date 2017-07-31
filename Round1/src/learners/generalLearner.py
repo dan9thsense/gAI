@@ -17,7 +17,8 @@ from learners import my_learners
 #from learners import q_network
 from learners import q_no_state_policy
 from learners import agent
-from learners import agent77
+from learners import mdpPolicy
+
 
 # when testing stand-alone
 #from base import BaseLearner
@@ -40,9 +41,9 @@ class GeneralLearner(BaseLearner):
     self.numConsecutiveRewards = 0
     self.numConsecutiveFailures = 0
     self.numFailures = 0
-    self.maxNumFailures = 200000
+    self.maxNumFailures = 10000
     self.numTries = 0
-    self.maxTries = 200000
+    self.maxTries = 10000
     self.learner = my_learners
     self.repeater = self.learner.Repeater()
     self.randomChar = self.learner.RandomCharacter()
@@ -53,25 +54,27 @@ class GeneralLearner(BaseLearner):
     #self.qLearner = q_network.myQNetwork()
     self.q_NoState = q_no_state_policy.NoStatePolicy()
     self.agent1 = agent.simpleAgent()
-    
+    self.mdpAgent = mdpPolicy.mdpPolicyAgent()
+
     # list of the learners with the max number of allowed failures for each
     # and slots for the number of tasks solved and the number of tasks failed for each
-    self.learnerList = [ [self.q_NoState, 71, 0, 0, 'q_NoState'], [self.agent1, 300, 0, 0, 'agent1'],\
+    self.learnerList = [ [self.mdpAgent, 300, 0, 0, 'mdpAgent'], [self.q_NoState, 71, 0, 0, 'q_NoState'],\
+      [self.agent1, 300, 0, 0, 'agent1'],\
       [self.repeater, 3, 0, 0, 'Repeater'], [self.randomChar, 71, 0, 0, 'Random Character'], \
       [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'] ]
     self.learnerIndex = 0
     self.individualTaskCompleted = False
     self.numIndividualTasksCompleted = 0
     #print("max number of consecutive failures for repeater = ", self.learnerList[self.learnerIndex][1])
-    
-      
+
+
   # we get an input character and send an output character in response
   def next(self, input):
     self.inputCharacter = input
     self.outputCharacter = self.learnerList[self.learnerIndex][0].charOut(self.inputCharacter)
     return self.outputCharacter
- 
-  # as a response to our output character, we get a reward value of -1, 0, or 1 
+
+  # as a response to our output character, we get a reward value of -1, 0, or 1
   def reward(self, myReward):
     self.numTries += 1
     if self.numTries > self.maxTries:
@@ -81,7 +84,7 @@ class GeneralLearner(BaseLearner):
         if self.enablePlotting:
           self.learnerList[self.learnerIndex][0].plotReward(self.learnerList[self.learnerIndex][4])
       exit()
-     
+
     print('when input was: ', self.inputCharacter, 'we got ')
     printChar = self.outputCharacter
     if self.outputCharacter == self.quietCharacter:
@@ -91,7 +94,7 @@ class GeneralLearner(BaseLearner):
         self.numIndividualTasksCompleted += 1
         self.learnerList[self.learnerIndex][2] += 1
         print("failure after ", self.numConsecutiveRewards, " consecutive rewards for this learner, which means that")
-        print(self.learnerList[self.learnerIndex][4], ", learner number ", self.learnerIndex, " completed this task") 
+        print(self.learnerList[self.learnerIndex][4], ", learner number ", self.learnerIndex, " completed this task")
         print("The number of tasks it has completed = ", self.learnerList[self.learnerIndex][2])
         self.numConsecutiveFailures = 0
         self.numConsecutiveRewards = 0
@@ -103,19 +106,19 @@ class GeneralLearner(BaseLearner):
         #    self.learnerList[self.learnerIndex][0].plotReward(self.learnerList[self.learnerIndex][4])
         #self.learnerIndex += 1
         return
-          
+
       self.numConsecutiveRewards = 0
       self.numConsecutiveFailures += 1
       self.numFailures += 1
-      if (self.numFailures > self.maxNumFailures) or (self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]):  
+      if (self.numFailures > self.maxNumFailures) or (self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]):
         self.learnerList[self.learnerIndex][3] += 1
         print(self.learnerList[self.learnerIndex][4], ", learner number ", self.learnerIndex, " failed this task with ")
-        if self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]:          
-          print(self.numConsecutiveFailures, " consecutive failures") 
+        if self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]:
+          print(self.numConsecutiveFailures, " consecutive failures")
         else:
           print(self.numFailures, " non-consecutive failures")
         print("The number of tasks it has failed = ", self.learnerList[self.learnerIndex][3])
-         
+
         # move on to next learner
         if self.enablePlotting:
           self.learnerList[self.learnerIndex][0].plotReward(self.learnerList[self.learnerIndex][4])
@@ -130,17 +133,16 @@ class GeneralLearner(BaseLearner):
         self.numConsecutiveFailures = 0
         self.numFailures = 0
         return
-           
-      print('negative reward for character: ', printChar)        
+
+      print('negative reward for character: ', printChar)
 
     elif myReward == 0:
         print('no reward for character: ', printChar)
-        
+
     elif myReward == 1:
         print('rewarded for character: ', printChar)
         self.numConsecutiveFailures = 0
         self.numRewards += 1
         self.numConsecutiveRewards += 1
-      
+
     self.learnerList[self.learnerIndex][0].rewardIn(myReward)
-    
