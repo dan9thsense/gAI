@@ -10,7 +10,7 @@ class Agent():
     def __init__(self, numHiddenLayerNeurons, learningRate, numberOfStates, numberOfActions):
         #These lines established the feed-forward part of the network. The agent takes a state and produces an action.
         #takes in the current state, which is the character index of the input
-        self.charIndex = tf.placeholder(dtype=tf.int32)
+        self.charIndex = tf.placeholder(dtype=tf.int32, name="charIndex")
         #do one-hot encoding on the state
         self.state_in_OH = tf.to_float(slim.one_hot_encoding(self.charIndex, numberOfStates))
         #need to reshape from (numberOfStates,) to (1,numberOfStates) to feed into state_in (?, numberOfStates)
@@ -19,7 +19,7 @@ class Agent():
         #The None element of the shape corresponds to a variable-sized dimension.
         #we need that to be able to feed in a variable number of states,
         #based on the number of steps it takes before we get a reward
-        self.state_in= tf.placeholder(shape=[None,numberOfStates],dtype=tf.float32, name="input_x")
+        self.state_in = tf.placeholder(shape=[None, numberOfStates], dtype=tf.float32, name="state_in")
 
         '''
         `fully_connected` creates a variable called `weights`, representing a fully
@@ -31,14 +31,14 @@ class Agent():
         it is applied to the hidden units as well.
         '''
 
-        hidden = slim.fully_connected(self.state_in,numHiddenLayerNeurons,biases_initializer=None,activation_fn=tf.nn.relu)
-        self.output = slim.fully_connected(hidden,numberOfActions,activation_fn=tf.nn.softmax,biases_initializer=None)
+        hidden = slim.fully_connected(self.state_in, numHiddenLayerNeurons, biases_initializer=None, activation_fn=tf.nn.relu, name="hidden1")
+        self.output = slim.fully_connected(hidden, numberOfActions, activation_fn=tf.nn.softmax, biases_initializer=None)
         #self.chosenAction = tf.argmax(self.output,1, name="chosenAction")
 
         # We need to define the parts of the network needed for learning a policy
         #Tensor("Placeholder_1:0", shape=(?,), dtype=int32)
-        self.reward_holder = tf.placeholder(shape=[None],dtype=tf.int32)
-        self.action_holder = tf.placeholder(shape=[None],dtype=tf.int32)
+        self.reward_holder = tf.placeholder(shape=[None], dtype=tf.int32, name="reward_holder")
+        self.action_holder = tf.placeholder(shape=[None], dtype=tf.int32, name="action_holder")
 
         #Tensor("add:0", shape=(?,), dtype=int32)
         self.indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
@@ -51,21 +51,21 @@ class Agent():
         # specify the trainable variables for later updating
         tvars = tf.trainable_variables()
         self.gradient_holders = []
-        for idx,var in enumerate(tvars):
-            placeholder = tf.placeholder(tf.float32,name=str(idx)+'_holder')
+        for idx, var in enumerate(tvars):
+            placeholder = tf.placeholder(tf.float32, name=str(idx)+'_holder')
             self.gradient_holders.append(placeholder)
 
         #compute the gradients
-        self.gradients = tf.gradients(self.loss,tvars)
+        self.gradients = tf.gradients(self.loss, tvars)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=learningRate)
-        self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
+        self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, tvars))
 
 class mdpPolicyAgent(Responder):
     def __init__(self):
         Responder.__init__(self)
         self.batch_size = 50
-        self.gamma=0.99
+        self.gamma = 0.99
         self.update_frequency = 5
         self.learningRate = 0.1
         self.createGraph()
@@ -80,18 +80,15 @@ class mdpPolicyAgent(Responder):
         #print("r =", r)
         return np.array([val * (gamma ** i) for i, val in enumerate(r)])
 
-        #this is used to initialize all th tf variables
-        init = tf.global_variables_initializer()
-
     def createGraph(self):
         #Clear the default graph stack and reset the global default graph.
         tf.reset_default_graph()
 
         # Placeholders for our observations, outputs and rewards
         #these are not tf placeholders
-        self.xs = np.empty(0).reshape(0,1)
-        self.ys = np.empty(0).reshape(0,1)
-        self.rewards = np.empty(0).reshape(0,1)
+        self.xs = np.empty(0).reshape(0, 1)
+        self.ys = np.empty(0).reshape(0, 1)
+        self.rewards = np.empty(0).reshape(0, 1)
 
         self.myAgent = Agent(numHiddenLayerNeurons=100, learningRate=self.learningRate, numberOfStates=self.numStates, numberOfActions=self.numActions)
 

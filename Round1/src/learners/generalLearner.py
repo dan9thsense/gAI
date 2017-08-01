@@ -17,7 +17,7 @@ from learners import my_learners
 #from learners import q_network
 from learners import q_no_state_policy
 from learners import agent
-from learners import mdpPolicy
+from learners import mdpPolicyWithTB
 
 
 # when testing stand-alone
@@ -41,9 +41,9 @@ class GeneralLearner(BaseLearner):
     self.numConsecutiveRewards = 0
     self.numConsecutiveFailures = 0
     self.numFailures = 0
-    self.maxNumFailures = 10000
+    self.maxNumFailures = 10
     self.numTries = 0
-    self.maxTries = 10000
+    self.maxTries = 10
     self.learner = my_learners
     self.repeater = self.learner.Repeater()
     self.randomChar = self.learner.RandomCharacter()
@@ -54,7 +54,7 @@ class GeneralLearner(BaseLearner):
     #self.qLearner = q_network.myQNetwork()
     self.q_NoState = q_no_state_policy.NoStatePolicy()
     self.agent1 = agent.simpleAgent()
-    self.mdpAgent = mdpPolicy.mdpPolicyAgent()
+    self.mdpAgent = mdpPolicyWithTB.mdpPolicyAgent()
 
     # list of the learners with the max number of allowed failures for each
     # and slots for the number of tasks solved and the number of tasks failed for each
