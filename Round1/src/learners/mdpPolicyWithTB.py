@@ -181,9 +181,9 @@ class mdpPolicyAgent(Responder):
         # use tensorBoard, writing to the directory "output"
         writer = tf.summary.FileWriter("output", sess.graph)
         learningRateTB = tf.summary.scalar("learning_rate", self.learningRate)
-        #lossTB = tf.summary.scalar("loss", self.myAgent.loss)
-        merged = tf.summary.merge_all()
 
+        merged = tf.summary.merge_all()
+        lossTB = tf.summary.scalar("loss", self.myAgent.loss)
         gradBuffer = sess.run(tf.trainable_variables())
         for ix,grad in enumerate(gradBuffer):
             gradBuffer[ix] = grad * 0
@@ -256,8 +256,10 @@ class mdpPolicyAgent(Responder):
                 ep_history_array[:,2] = sess.run(reshapeDR)
                 #print(ep_history_array[:,2])
                 feed_dict={self.myAgent.reward_holder:ep_history_array[:,2], self.myAgent.action_holder:ep_history_array[:,1], self.myAgent.state_in:np.vstack(ep_history_array[:,0])}
-                grads = sess.run(self.myAgent.gradients, feed_dict=feed_dict)
 
+                grads, lossSummary = sess.run([self.myAgent.gradients, lossTB], feed_dict=feed_dict)
+                #grads = sess.run(self.myAgent.gradients, feed_dict=feed_dict)
+                writer.add_summary(lossSummary, counter)
                 for idx,grad in enumerate(grads):
                     gradBuffer[idx] += grad
 
@@ -266,6 +268,7 @@ class mdpPolicyAgent(Responder):
                     _ = sess.run(self.myAgent.update_batch, feed_dict=feed_dict)
                     for ix,grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
+                    lossTB = tf.summary.scalar("loss", self.myAgent.loss)
                     counter = 0
 
             counter += 1

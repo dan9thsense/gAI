@@ -1,12 +1,16 @@
 * General results
-Average reward: -0.9
-Total time: 10
-Total reward: -9
+Average reward: -0.668333333333
+Total time: 3000
+Total reward: -2005
 * Average reward per task
-Micro1Task: -1.0
+Micro2Task: -0.339798293251
+Micro1Task: -0.915254237288
 * Total reward per task
-Micro1Task: -10
+Micro2Task: -438
+Micro1Task: -1566
 * Total time per task
-Micro1Task: 10
+Micro2Task: 1289
+Micro1Task: 1711
 * Number of trials per task
-Micro1Task: 1
+Micro1Task: 12
+Micro2Task: 14

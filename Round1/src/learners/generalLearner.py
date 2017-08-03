@@ -41,9 +41,9 @@ class GeneralLearner(BaseLearner):
     self.numConsecutiveRewards = 0
     self.numConsecutiveFailures = 0
     self.numFailures = 0
-    self.maxNumFailures = 10
+    self.maxNumFailures = 3000
     self.numTries = 0
-    self.maxTries = 10
+    self.maxTries = 3000
     self.learner = my_learners
     self.repeater = self.learner.Repeater()
     self.randomChar = self.learner.RandomCharacter()
