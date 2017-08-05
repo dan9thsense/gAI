@@ -1,4 +1,4 @@
-import gym
+
 import numpy as np
 import random
 import tensorflow as tf
@@ -16,6 +16,9 @@ class myQNetwork(Responder):
       learningRate = 0.1
       self.action = 0
       self.currentState = 0
+      self.y = .99
+      self.e = 0.1
+      self.numResets = 0
       
       self.resetCalled = False
       self.learn = self.runNet()
@@ -30,14 +33,8 @@ class myQNetwork(Responder):
       self.nextQ = tf.placeholder(shape=[1,self.numActions],dtype=tf.float32)
       self.loss = tf.reduce_sum(tf.square(self.nextQ - self.Qout))
       self.trainer = tf.train.GradientDescentOptimizer(learning_rate = learningRate)
-      self.updateModel = self.trainer.minimize(self.loss)
-      
+      self.updateModel = self.trainer.minimize(self.loss)      
       self.init = tf.global_variables_initializer() #tf.initialize_all_variables()
-
-      # Set learning parameters
-      self.y = .99
-      self.e = 0.1
-      self.numResets = 0
 
     def rewardIn(self, reward):
       self.reward = reward

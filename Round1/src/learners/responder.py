@@ -24,9 +24,9 @@ class Responder:
     self.previousCharacter = '+'
     self.outputCharacter = '.'
     self.quietCharacter = ' ' # this is the correct response when we get an input that corrects our previous response
-    self.resetCalled = False
     self.netWasReset = True
     self.resetVariables = False
+    self.done = False
     self.numResets = 0
     self.numActions = len(self.characters)
     self.numStates = len(self.characters)
@@ -37,7 +37,11 @@ class Responder:
     self.learningRate = 0.001
     self.totalReward = 0
     self.rewardList = []
-    self.initializeValues()
+    self.currentState = 0
+    self.previousState = 0
+    self.reward = 0
+    self.action = 0
+    #self.initializeValues()
 
 
   def initializeValues(self):
@@ -49,10 +53,14 @@ class Responder:
   def resetWeights(self):
     self.resetVariables = True
 
+  def closeTF(self):
+    self.done = True
+    self.getOutput()
+    self.initializeValues()
+
   def rewardIn(self, reward):
     self.reward = reward
-    #print("reward received = ", self.reward)
-    self.totalReward += reward
+    self.totalReward += self.reward
     if self.recordRewards:
       self.rewardList.append(self.totalReward)
 
@@ -68,17 +76,6 @@ class Responder:
     self.outputCharacter = self.getOutput()
     #print("character out was = ", self.outputCharacter)
     return self.outputCharacter
-
-  def reset(self):
-    self.resetCalled = True
-    # break out of generator
-    self.getOutput()
-    self.initializeValues()
-
-    #Reduce chance of random action as we train the model.
-    if self.numResets < 10000:
-      self.numResets += 1
-      self.e = self.initialRandomActionProbability/((self.numResets/50) + 10)
 
   def plotReward(self, learnerName):
     if len(self.rewardList) > 2 and self.recordRewards and self.plotResults:

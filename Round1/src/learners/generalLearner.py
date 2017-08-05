@@ -11,12 +11,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 #import random
 #from core.serializer import StandardSerializer, IdentitySerializer
-from learners.base import BaseLearner
 from learners import my_learners
 #from learners import q_learner
 #from learners import q_network
-from learners import q_no_state_policy
-from learners import agent
+from learners import q_no_state_policyWithTB
+from learners import agentWithTB
 from learners import mdpPolicyWithTB
 
 
@@ -26,7 +25,7 @@ from learners import mdpPolicyWithTB
 #import rnn_learner
 #import learners.q_learner
 
-class GeneralLearner(BaseLearner):
+class GeneralLearner():
   def __init__(self):
     self.enablePlotting = False
     self.quietCharacter = ' ' # this is the correct response when we get an input that corrects our previous response
@@ -41,9 +40,9 @@ class GeneralLearner(BaseLearner):
     self.numConsecutiveRewards = 0
     self.numConsecutiveFailures = 0
     self.numFailures = 0
-    self.maxNumFailures = 3000
+    self.maxNumFailures = 10000
     self.numTries = 0
-    self.maxTries = 3000
+    self.maxTries = 10000
     self.learner = my_learners
     self.repeater = self.learner.Repeater()
     self.randomChar = self.learner.RandomCharacter()
@@ -52,16 +51,17 @@ class GeneralLearner(BaseLearner):
     #self.rnn_learner = rnn_learner.myRNN()
     #self.qLearner = q_learner.myQ()
     #self.qLearner = q_network.myQNetwork()
-    self.q_NoState = q_no_state_policy.NoStatePolicy()
-    self.agent1 = agent.simpleAgent()
+    self.q_NoState = q_no_state_policyWithTB.NoStatePolicy()
+    self.agent1 = agentWithTB.simpleAgent()
     self.mdpAgent = mdpPolicyWithTB.mdpPolicyAgent()
 
     # list of the learners with the max number of allowed failures for each
     # and slots for the number of tasks solved and the number of tasks failed for each
-    self.learnerList = [ [self.mdpAgent, 300, 0, 0, 'mdpAgent'], [self.q_NoState, 71, 0, 0, 'q_NoState'],\
-      [self.agent1, 300, 0, 0, 'agent1'],\
+    self.learnerList = [ [self.q_NoState, 71, 0, 0, 'q_NoState'],\
+      #[self.agent1, 300, 0, 0, 'agent1'],\
       [self.repeater, 3, 0, 0, 'Repeater'], [self.randomChar, 71, 0, 0, 'Random Character'], \
-      [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'] ]
+      [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'], \
+      [self.mdpAgent, 300, 0, 0, 'mdpAgent'] ]
     self.learnerIndex = 0
     self.individualTaskCompleted = False
     self.numIndividualTasksCompleted = 0
@@ -80,12 +80,13 @@ class GeneralLearner(BaseLearner):
     if self.numTries > self.maxTries:
       print('exiting with ', self.numTries, ' tries', self.numRewards, 'rewards')
       for i in range(len(self.learnerList)):
-        print("learner ", i, " completed ", self.learnerList[i][2], " and failed ", self.learnerList[i][3], " tasks")
+        print("learner ", self.learnerList[i][4], " completed ", self.learnerList[i][2], " and failed ", self.learnerList[i][3], " tasks")
         if self.enablePlotting:
           self.learnerList[self.learnerIndex][0].plotReward(self.learnerList[self.learnerIndex][4])
+      self.learnerList[self.learnerIndex][0].closeTF()
       exit()
 
-    print('when input was: ', self.inputCharacter, 'we got ')
+    #print('when input was: ', self.inputCharacter, 'we got ')
     printChar = self.outputCharacter
     if self.outputCharacter == self.quietCharacter:
       printChar = "quietCharacter (space)"
@@ -93,14 +94,14 @@ class GeneralLearner(BaseLearner):
       if self.numConsecutiveRewards >= self.rewardsNeededToFinishTask:
         self.numIndividualTasksCompleted += 1
         self.learnerList[self.learnerIndex][2] += 1
-        print("failure after ", self.numConsecutiveRewards, " consecutive rewards for this learner, which means that")
         print(self.learnerList[self.learnerIndex][4], ", learner number ", self.learnerIndex, " completed this task")
+        print("with ", self.numConsecutiveRewards, " consecutive rewards for this learner")
         print("The number of tasks it has completed = ", self.learnerList[self.learnerIndex][2])
         self.numConsecutiveFailures = 0
         self.numConsecutiveRewards = 0
         self.numFailures = 0
-        print(self.learnerList[self.learnerIndex][4], " succeeded with this task, so we'll use it again, assuming the task is repeated")
-        print("closing tf session with a reset in ", self.learnerList[self.learnerIndex][4])
+        print(self.learnerList[self.learnerIndex][4], " succeeded with this task, so we'll use it again, in case the task is repeated")
+        print("resetting weights in ", self.learnerList[self.learnerIndex][4])
         self.learnerList[self.learnerIndex][0].resetWeights()
         #if self.enablePlotting:
         #    self.learnerList[self.learnerIndex][0].plotReward(self.learnerList[self.learnerIndex][4])
@@ -123,8 +124,8 @@ class GeneralLearner(BaseLearner):
         if self.enablePlotting:
           self.learnerList[self.learnerIndex][0].plotReward(self.learnerList[self.learnerIndex][4])
         # self.learnerList[self.learnerIndex][0].printQ()
-        print("closing tf session with a reset in ", self.learnerList[self.learnerIndex][4])
-        self.learnerList[self.learnerIndex][0].reset()
+        print("closing tf session in ", self.learnerList[self.learnerIndex][4])
+        self.learnerList[self.learnerIndex][0].closeTF()
         self.learnerIndex += 1
 
         if self.learnerIndex >= len(self.learnerList):
@@ -134,7 +135,7 @@ class GeneralLearner(BaseLearner):
         self.numFailures = 0
         return
 
-      print('negative reward for character: ', printChar)
+      #print('negative reward for character: ', printChar)
 
     elif myReward == 0:
         print('no reward for character: ', printChar)
