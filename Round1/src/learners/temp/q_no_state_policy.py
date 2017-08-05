@@ -1,0 +1,94 @@
+# this network finds the best action without using inputs, it just sends out actions and looks for rewards
+
+from responder import Responder
+import numpy as np
+import tensorflow as tf
+import tensorflow.contrib.slim as slim
+
+class Agent():
+  def __init__(self, learningRate, numberOfActions):
+    #These lines established the feed-forward part of the network. The agent produces an action without regard to state
+    self.actionWeights = tf.Variable(tf.ones([numberOfActions]))
+    self.chosen_action = tf.argmax(self.actionWeights,0)
+
+    #The next six lines establish the training proceedure. We feed the reward and chosen action into the network
+    #to compute the loss, and use it to update the network.
+    self.reward_holder = tf.placeholder(shape=[1],dtype=tf.float32)
+    self.action_holder = tf.placeholder(shape=[1],dtype=tf.int32)
+    self.responsible_weight = tf.slice(self.actionWeights,self.action_holder,[1])
+    self.loss = -(tf.log(self.responsible_weight)*self.reward_holder)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learningRate)
+    self.update = optimizer.minimize(self.loss)
+
+class NoStatePolicy(Responder):
+  def __init__(self):
+    Responder.__init__(self)
+    
+  def createGraph(self):   
+    #Clear the default graph stack and reset the global default graph.
+    tf.reset_default_graph()
+
+    #Establish the training proceedure. We feed the reward and chosen action into the network
+    #to compute the loss, and use it to update the network.    
+    self.myAgent = Agent(learningRate=self.learningRate,numberOfActions=self.numActions)
+    
+    #The weights we will evaluate to look into the network., Returns all variables created with `trainable=True
+    self.weights = tf.trainable_variables()[0] 
+    
+    #Variable to call next(..) from the training generator. Calling the generator directly causes it to run from the start
+    self.learner = self.runNet()   
+  
+  def getOutput(self):
+    if self.resetCalled:
+      try:
+        next(self.learner)
+      except StopIteration:
+        print("completed a reset net in agent.py")
+      self.netWasReset = True        
+      self.resetCalled = False
+      
+    else:
+      if self.netWasReset:
+        self.netWasReset = False
+        print("creating a new tf graph in agent.py")
+        self.createGraph()
+        return next(self.learner)
+      else:
+        return next(self.learner)
+      
+  def runNet(self):
+    # Launch the tensorflow graph
+    sess = tf.Session()
+    sess.run(tf.global_variables_initializer())
+    while True:           
+       # first check if the call came from reset
+      if self.resetCalled:
+        # reset the weights
+        print("reset called in agent.py, exiting tf session")
+        sess.close()
+        return
+        
+      if self.resetVariables:
+        # re-initialize values, but keep the tree structure
+        sess.run(tf.global_variables_initializer())
+        self.resetVariables = False
+
+      # include a chance to pick a random action
+      if np.random.rand(1) < self.e:
+        self.action = np.random.randint(self.numActions)              
+      else:
+        #pick the action with the highest weight
+        self.action = sess.run(self.myAgent.chosen_action)         
+         
+      yield self.characters[self.action]
+
+      # we freeze here
+      # while frozen, the output is sent, a reward is received
+              
+      #we now have a reward based on the action we took
+      #Update the network
+      sess.run([self.myAgent.update, self.myAgent.responsible_weight, self.weights],\
+        feed_dict={self.myAgent.reward_holder:[self.reward],self.myAgent.action_holder:[self.action]})
+
+    
+
