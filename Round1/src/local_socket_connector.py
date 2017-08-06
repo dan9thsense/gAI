@@ -64,8 +64,8 @@ reward = 0
 
 while True:
     if reward == 0:
-      #print("reward: {}".format(reward))
-      print("reward = 0")
+        #print("reward: {}".format(reward))
+        print("reward = 0")
     print("\n")
     print("input : {}".format(input_str))
     for c in input_str:
@@ -78,9 +78,9 @@ while True:
     reward_str, input_str = read_data()
     reward = 0
     try:
-      reward = int(reward_str)
+        reward = int(reward_str)
     except TypeValue:
-      print("reward_str not converted to int")
+        print("reward_str not converted to int")
     gL.reward(reward)
 
 
