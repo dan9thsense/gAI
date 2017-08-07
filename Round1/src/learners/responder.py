@@ -42,6 +42,8 @@ class Responder:
         self.recordRewards = True
         self.plotResults = False
         self.useTensorBoard = True
+        self.saveModels = True
+        self.loadModels = True
 
     def initializeValues(self):
         self.currentState = 0

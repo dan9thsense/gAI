@@ -32,6 +32,12 @@ class Agent():
 class simpleAgent(Responder):
     def __init__(self):
         Responder.__init__(self)
+        #we are using a trained model, no need to train further or to save or display results
+        self.recordRewards = False
+        self.plotResults = False
+        self.useTensorBoard = False
+        self.saveModels = False
+        self.loadModels = True
 
     def createGraph(self):
         #Clear the default graph stack and reset the global default graph.
@@ -169,7 +175,7 @@ class simpleAgent(Responder):
 
             #Include a chance to pick a random action
             #Reduce chance of random action as we train the model.
-            counter += 1
+            '''counter += 1
             if counter < 10000:
                 self.e = self.initialRandomActionProbability/((counter/50) + 10)
 
@@ -178,7 +184,8 @@ class simpleAgent(Responder):
                 print("random action selected in agent")
             else:
                 # for this state, pick the action with the highest weight
-                self.action = self.sess.run(self.myAgent.chosen_action,\
+            '''
+            self.action = self.sess.run(self.myAgent.chosen_action,\
                     feed_dict={self.myAgent.state_in:[self.currentState]})
 
             #actionValue = self.sess.run(self.myAgent.action_holder[0], feed_dict={self.myAgent.action_holder:[self.action]})
@@ -190,6 +197,7 @@ class simpleAgent(Responder):
 
             #we now have a new current state as well as the reward based on the action we took in the previous state
             #Update the network
+            '''
             networkFeeder = {self.myAgent.reward_holder:[self.reward],self.myAgent.action_holder:[self.action],\
                 self.myAgent.state_in:[self.previousState]}
             _, self.weightValues, loss, output, selOutput, self.statesToActions = self.sess.run([self.myAgent.update, self.weights, \
@@ -205,9 +213,10 @@ class simpleAgent(Responder):
                 #print('added summary, counter = ', counter)
             #print('weight used:', weights[self.action])
             # selected_output and loss are arrays with just single values
-            print('step = ', counter, ' action = ', self.action, 'selected output = ', selOutput[0]) #, 'loss =', loss[0])
+            #print('step = ', counter, ' action = ', self.action, 'selected output = ', selOutput[0]) #, 'loss =', loss[0])
             #print('statesToActions = ', self.statesToActions)
             #print(' output = ', output)
+            '''
         #end while True
     #end def runNet(self)
  #end class simpleAgent

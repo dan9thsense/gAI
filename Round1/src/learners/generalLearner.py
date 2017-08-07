@@ -17,6 +17,7 @@ from learners import my_learners
 from learners import q_no_state_policyWithTB
 from learners import agentWithTB
 from learners import mdpPolicyWithTB
+from learners import agentTrainedRepeater
 
 
 # when testing stand-alone
@@ -36,14 +37,14 @@ class GeneralLearner():
         self.foundCharacter = False
         self.teacher_stopped_talking = False
         self.numRewards = 0
-        self.rewardsNeededToFinishTask = 20
+        self.rewardsNeededToFinishTask = 1000
         self.numConsecutiveRewards = 0
         self.numConsecutiveFailures = 0
         self.numFailures = 0
-        self.maxNumFailures = 2000
+        self.maxNumFailures = 1000
         self.steps = 0
         self.numTries = 0
-        self.maxTries = 2000
+        self.maxTries = 1000
         self.learner = my_learners
         self.repeater = self.learner.Repeater()
         self.randomChar = self.learner.RandomCharacter()
@@ -55,13 +56,19 @@ class GeneralLearner():
         self.q_NoState = q_no_state_policyWithTB.NoStatePolicy()
         self.agent1 = agentWithTB.simpleAgent()
         self.mdpAgent = mdpPolicyWithTB.mdpPolicyAgent()
+        self.trainedRepeater = agentTrainedRepeater.simpleAgent()
 
         # list of the learners with the max number of allowed failures for each
         # and slots for the number of tasks solved and the number of tasks failed for each
-        self.learnerList = [  [self.agent1, 11000, 0, 0, 'agent1'], [self.q_NoState, 71, 0, 0, 'q_NoState'],\
-            [self.repeater, 3, 0, 0, 'Repeater'], [self.randomChar, 71, 0, 0, 'Random Character'], \
-            [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'], \
-            [self.mdpAgent, 10000, 0, 0, 'mdpAgent']]
+        self.learnerList = [\
+            [self.trainedRepeater, 5, 0, 0, 'trainedRepeater'],\
+            [self.agent1, 11000, 0, 0, 'agent1'],\
+            [self.mdpAgent, 10000, 0, 0, 'mdpAgent'],\
+            [self.q_NoState, 71, 0, 0, 'q_NoState'],\
+            [self.repeater, 3, 0, 0, 'Repeater'],\
+            [self.randomChar, 71, 0, 0, 'Random Character'],\
+            [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'],\
+            ]
         self.learnerIndex = 0
         self.individualTaskCompleted = False
         self.numIndividualTasksCompleted = 0
