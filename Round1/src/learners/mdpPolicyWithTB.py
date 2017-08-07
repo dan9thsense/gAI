@@ -154,28 +154,32 @@ class mdpPolicyAgent(Responder):
         self.learner = self.runNet()
 
     def createTensorboardSummaries(self):
-        def variable_statistics(var):
+        def variable_statistics(var, name):
              #Attach a lot of summaries to a Tensor (for TensorBoard visualization).
-             with tf.name_scope('statistics_mdpPolicy'):
+             with tf.name_scope('statistics_mdpPolicy_' + name):
                  mean = tf.reduce_mean(var)
                  tf.summary.scalar('mean', mean)
                  with tf.name_scope('stddev'):
                      stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-                 tf.summary.scalar('stddev', stddev)
+                     tf.summary.scalar('stddev', stddev)
                  tf.summary.scalar('max', tf.reduce_max(var))
                  tf.summary.scalar('min', tf.reduce_min(var))
                  tf.summary.histogram('histogram', var)
         #end of variable statistics
 
         with tf.name_scope('mdpPolicy'):
-            variable_statistics(self.hiddenLayerWeights)
+            variable_statistics(self.hiddenLayerWeights, 'hidden_layer')
             tf.summary.histogram('zeroed_weights_mdpPolicy', 0.99 - self.hiddenLayerWeights)
             tf.summary.histogram('biases_mdpPolicy', self.hiddenLayerBiases)
             tf.summary.histogram('action_mdpPolicy', self.myAgent.action_holder)
             tf.summary.histogram("reward_mdpPolicy", self.myAgent.reward_holder)
-            tf.summary.scalar('selectedOutput_mdpPolicy', self.myAgent.selected_output[0])
-            tf.summary.histogram("output_mdpPolicy", self.myAgent.output)
-            tf.summary.histogram("loss_mdpPolicy", self.myAgent.loss)
+            #tf.summary.scalar('selectedOutput_mdpPolicy', self.myAgent.selected_output[0])
+            #tf.summary.histogram("output_mdpPolicy", self.myAgent.output)
+            #tf.summary.scalar("loss_mdpPolicy", self.myAgent.loss[0])
+            self.currentReward = tf.placeholder(dtype=tf.int32, name="current_reward")
+            self.currentAction = tf.placeholder(dtype=tf.int32, name="current_action")
+            tf.summary.scalar('current_reward', self.currentReward)
+            tf.summary.scalar('current_action', self.currentAction)
 
 
         self.merged = tf.summary.merge_all()
@@ -252,9 +256,9 @@ class mdpPolicyAgent(Responder):
             #print("values = ", self.rewards, ep_history)
             #self.rewards.append(self.reward)
 
+            ep_history_array = np.array(ep_history)
             if self.reward == 1:
                 #Update the network.
-                ep_history_array = np.array(ep_history)
                 #print("ep_history: ", ep_history[:,2])
                 #ep_history[:,2] = self.discount_rewards(ep_history[:,2])
                 # Determine standardized rewards
@@ -296,25 +300,27 @@ class mdpPolicyAgent(Responder):
                     self.myAgent.action_holder:ep_history_array[:,1]})
                 '''
 
-                if self.useTensorBoard:
-                    summaryFeeder = {self.myAgent.reward_holder:ep_history_array[:,2], \
-                        self.myAgent.action_holder:ep_history_array[:,1], \
-                        self.myAgent.output:output_dist, self.myAgent.selected_output:selOut, \
-                        self.myAgent.loss:loss, \
-                        self.hiddenLayerWeights:hiddenWeights, self.hiddenLayerBiases:hiddenBiases}
-
-                    summaryMerged = self.sess.run(merged, feed_dict=summaryFeeder)
-                    writer.add_summary(summaryMerged, summaryCounter)
-                    summaryCounter += 1
-
                 if counter % self.update_frequency == 0 and counter != 0:
                     feed_dict= dictionary = dict(zip(self.myAgent.gradient_holders, gradBuffer))
                     _ = self.sess.run(self.myAgent.update_batch, feed_dict=feed_dict)
                     for ix,grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
-                #end of if reward == 1
+            #end of if reward == 1
+
+            if self.useTensorBoard:
+                summaryFeeder = {self.myAgent.reward_holder:ep_history_array[:,2], \
+                    self.myAgent.action_holder:ep_history_array[:,1], \
+                    self.hiddenLayerWeights:hiddenWeights, self.hiddenLayerBiases:hiddenBiases, \
+                    self.currentReward:self.reward, self.currentAction:self.action}
+                    #self.myAgent.loss:loss, \
+                    #self.myAgent.output:output_dist, self.myAgent.selected_output:selOut, \
+
+                summaryMerged = self.sess.run(merged, feed_dict=summaryFeeder)
+                writer.add_summary(summaryMerged, summaryCounter)
+                summaryCounter += 1
             counter += 1
-            #end of while True
+
+        #end of while True
         if self.useTensorBoard:
             self.writer.flush()
             self.writer.close()

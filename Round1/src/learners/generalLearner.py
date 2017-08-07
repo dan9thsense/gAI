@@ -36,14 +36,14 @@ class GeneralLearner():
         self.foundCharacter = False
         self.teacher_stopped_talking = False
         self.numRewards = 0
-        self.rewardsNeededToFinishTask = 10
+        self.rewardsNeededToFinishTask = 20
         self.numConsecutiveRewards = 0
         self.numConsecutiveFailures = 0
         self.numFailures = 0
-        self.maxNumFailures = 10000
+        self.maxNumFailures = 2000
         self.steps = 0
         self.numTries = 0
-        self.maxTries = 10000
+        self.maxTries = 2000
         self.learner = my_learners
         self.repeater = self.learner.Repeater()
         self.randomChar = self.learner.RandomCharacter()
@@ -58,10 +58,10 @@ class GeneralLearner():
 
         # list of the learners with the max number of allowed failures for each
         # and slots for the number of tasks solved and the number of tasks failed for each
-        self.learnerList = [[self.mdpAgent, 300, 0, 0, 'mdpAgent'], [self.q_NoState, 71, 0, 0, 'q_NoState'],\
+        self.learnerList = [  [self.agent1, 11000, 0, 0, 'agent1'], [self.q_NoState, 71, 0, 0, 'q_NoState'],\
             [self.repeater, 3, 0, 0, 'Repeater'], [self.randomChar, 71, 0, 0, 'Random Character'], \
             [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'], \
-            [self.agent1, 300, 0, 0, 'agent1'] ]
+            [self.mdpAgent, 10000, 0, 0, 'mdpAgent']]
         self.learnerIndex = 0
         self.individualTaskCompleted = False
         self.numIndividualTasksCompleted = 0
