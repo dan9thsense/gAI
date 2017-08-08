@@ -17,7 +17,7 @@ from learners import my_learners
 from learners import q_no_state_policyWithTB
 from learners import agentWithTB
 from learners import mdpPolicyWithTB
-from learners import agentTrainedRepeater
+from learners import agentMinimalTrainedRepeater
 
 
 # when testing stand-alone
@@ -37,37 +37,40 @@ class GeneralLearner():
         self.foundCharacter = False
         self.teacher_stopped_talking = False
         self.numRewards = 0
-        self.rewardsNeededToFinishTask = 1000
+        self.rewardsNeededToFinishTask = 10
         self.numConsecutiveRewards = 0
         self.numConsecutiveFailures = 0
         self.numFailures = 0
         self.maxNumFailures = 1000
         self.steps = 0
         self.numTries = 0
-        self.maxTries = 1000
+        self.maxTries = 10000
         self.learner = my_learners
         self.repeater = self.learner.Repeater()
         self.randomChar = self.learner.RandomCharacter()
         self.alphaNumeric = self.learner.alphaNumeric()
         self.inputOutputFeedback = self.learner.InputOutputFeedback()
+        self.alphaNumericIOFeedback = self.learner.AlphaNumericIOFeedback()
         #self.rnn_learner = rnn_learner.myRNN()
         #self.qLearner = q_learner.myQ()
         #self.qLearner = q_network.myQNetwork()
         self.q_NoState = q_no_state_policyWithTB.NoStatePolicy()
         self.agent1 = agentWithTB.simpleAgent()
         self.mdpAgent = mdpPolicyWithTB.mdpPolicyAgent()
-        self.trainedRepeater = agentTrainedRepeater.simpleAgent()
+        self.trainedRepeater = agentMinimalTrainedRepeater.simpleAgent()
 
         # list of the learners with the max number of allowed failures for each
         # and slots for the number of tasks solved and the number of tasks failed for each
         self.learnerList = [\
-            [self.trainedRepeater, 5, 0, 0, 'trainedRepeater'],\
-            [self.agent1, 11000, 0, 0, 'agent1'],\
-            [self.mdpAgent, 10000, 0, 0, 'mdpAgent'],\
-            [self.q_NoState, 71, 0, 0, 'q_NoState'],\
-            [self.repeater, 3, 0, 0, 'Repeater'],\
-            [self.randomChar, 71, 0, 0, 'Random Character'],\
-            [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric'], [self.inputOutputFeedback, 5, 0, 0, 'ioFeedback'],\
+            [self.q_NoState, 71, 0, 0, 'q_NoState_task1'],\
+            [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric_task2'],\
+            [self.trainedRepeater, 5, 0, 0, 'trainedRepeater_task4'],\
+            [self.alphaNumericIOFeedback, 20, 0, 0, 'aNioFeedback_task5_2']\
+            #[self.inputOutputFeedback, 20, 0, 0, 'ioFeedback_task5_1'],\
+            #[self.agent1, 300, 0, 0, 'agent1_task3'],\
+            #[self.mdpAgent, 300, 0, 0, 'mdpAgent'],\
+            #[self.randomChar, 71, 0, 0, 'Random Character_task1'],\
+            #[self.repeater, 3, 0, 0, 'Repeater'],\
             ]
         self.learnerIndex = 0
         self.individualTaskCompleted = False
@@ -120,7 +123,9 @@ class GeneralLearner():
             self.numConsecutiveRewards = 0
             self.numConsecutiveFailures += 1
             self.numFailures += 1
-            if (self.numFailures > self.maxNumFailures) or (self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]):
+            if (self.numFailures > self.maxNumFailures + self.learnerList[self.learnerIndex][1]) or\
+                (self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]):
+
                 self.learnerList[self.learnerIndex][3] += 1
                 print(self.learnerList[self.learnerIndex][4], ", learner number ", self.learnerIndex, " failed this task with ")
                 if self.numConsecutiveFailures > self.learnerList[self.learnerIndex][1]:

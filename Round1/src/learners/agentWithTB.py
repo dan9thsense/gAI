@@ -75,7 +75,8 @@ class simpleAgent(Responder):
             self.sess = tf.Session()
             self.sess.run(tf.global_variables_initializer())
             # Restore latest checkpoint
-            self.model_saver.restore(self.sess, tf.train.latest_checkpoint('saved_models/agent_repeater/.'))
+            self.model_saver.restore(self.sess, tf.train.latest_checkpoint('saved_models/.'))
+            #self.model_saver.restore(self.sess, tf.train.latest_checkpoint('saved_models/agent_repeater/.'))
             print('using a saved model in agent')
             #self.model_saver.restore(self.sess, "saved_models/agent.ckpt")
         else:
@@ -150,8 +151,8 @@ class simpleAgent(Responder):
             # first check if the call came from reset or done
             if self.done:
                 print("done called in agent.py, exiting tf session")
+                self.printResetReport()
                 if self.useTensorBoard:
-                    self.printResetReport()
                     self.writer.flush()
                     self.writer.close()
                     print('closed TensorBoard writer with done call at counter = ', counter)
@@ -167,21 +168,18 @@ class simpleAgent(Responder):
                 #self.sess.run(tf.global_variables_initializer())
                 self.resetVariables = False
 
-            #Include a chance to pick a random action
+            #If we did not get a positive reward, include a chance to pick a random action
             #Reduce chance of random action as we train the model.
-            counter += 1
-            if counter < 10000:
-                self.e = self.initialRandomActionProbability/((counter/50) + 10)
-
-            if np.random.rand(1) < self.e:
-                self.action = np.random.randint(self.numActions)
-                print("random action selected in agent")
+            if self.reward < 1:
+                if counter < 10000:
+                    self.e = self.initialRandomActionProbability/((counter/50) + 10)
+                if np.random.rand(1) < self.e:
+                    self.action = np.random.randint(self.numActions)
+                    print("random action selected in agent")
             else:
                 # for this state, pick the action with the highest weight
                 self.action = self.sess.run(self.myAgent.chosen_action,\
                     feed_dict={self.myAgent.state_in:[self.currentState]})
-
-            #actionValue = self.sess.run(self.myAgent.action_holder[0], feed_dict={self.myAgent.action_holder:[self.action]})
 
             yield self.characters[self.action]
             # we freeze here
@@ -202,10 +200,10 @@ class simpleAgent(Responder):
                 self.myAgent.selected_output:selOutput }
                 summaryMerged = self.sess.run(self.merged, feed_dict=summaryFeeder)
                 self.writer.add_summary(summaryMerged, counter)
-                #print('added summary, counter = ', counter)
             #print('weight used:', weights[self.action])
             # selected_output and loss are arrays with just single values
-            print('step = ', counter, ' action = ', self.action, 'selected output = ', selOutput[0]) #, 'loss =', loss[0])
+            print('step = ', counter) #, ' action = ', self.action, 'selected output = ', selOutput[0]) #, 'loss =', loss[0])
+            counter += 1
             #print('statesToActions = ', self.statesToActions)
             #print(' output = ', output)
         #end while True

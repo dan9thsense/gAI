@@ -21,7 +21,6 @@ class Responder:
             '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
         self.numberCharacters = [ '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' ]
         self.inputCharacter = '-'
-        self.previousCharacter = '+'
         self.outputCharacter = '.'
         self.quietCharacter = ' ' # this is the correct response when we get an input that corrects our previous response
         self.netWasReset = True
@@ -39,11 +38,11 @@ class Responder:
         self.previousState = 0
         self.reward = 0
         self.action = 0
-        self.recordRewards = True
+        self.recordRewards = False
         self.plotResults = False
-        self.useTensorBoard = True
+        self.useTensorBoard = False
         self.saveModels = True
-        self.loadModels = True
+        self.loadModels = False
 
     def initializeValues(self):
         self.currentState = 0

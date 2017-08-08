@@ -91,7 +91,7 @@ class MicroBase(Task):
         self.questions_asked += 1
 
     def check_if_task_instance_finished(self):
-        return False
+        #return False
         if self.agent_solved_instance_under_time_limit():    # agent solved instance in time
             self.set_result(True, provide_result_as_reward=False)
             return True
@@ -347,12 +347,12 @@ class Micro3Task(MicroMappingTask):
 
 
 class Micro4Task(MicroMappingTask):
-    ALPHABET_SIZE = 4
-
+    local_base_alphabet = string.ascii_letters + string.digits + ' ,.!;?-'
+    ALPHABET_SIZE = len(local_base_alphabet)
     @on_start()
     def micro4_on_start(self, event):
-        self.alphabet = random.sample(string.ascii_lowercase + ' !":?.,;', self.ALPHABET_SIZE)
-
+        #self.alphabet = random.sample(string.ascii_lowercase + ' !":?.,;', self.ALPHABET_SIZE)
+        self.alphabet = random.sample(self.local_base_alphabet, self.ALPHABET_SIZE)
     def _get_mapping(self):
         alphabet = self.alphabet
         mapping = dict(zip(alphabet, alphabet))

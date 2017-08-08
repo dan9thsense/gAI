@@ -102,8 +102,8 @@ class NoStatePolicy(Responder):
                 self.sess.run(tf.global_variables_initializer())
                 self.resetVariables = False
 
-            # include a chance to pick a random action
-            if np.random.rand(1) < self.e:
+            # include a chance to pick a random action if we didn't just get a positive reward
+            if (np.random.rand(1) < self.e) and (self.reward != 1):
                 self.action = np.random.randint(self.numActions)
                 print("random character chosen from q_no_state_policyWithTB")
             else:
