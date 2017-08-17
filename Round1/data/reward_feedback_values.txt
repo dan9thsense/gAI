@@ -1,0 +1,9 @@
+.7310586 is the starting value for output
+when rewarded, goes to .73111147, a change of +0.00005287
+when negative reward, goes to .73100573, a change of -0.00005287
+
+normalized for a learnng rate of 0.001, the delta is .05287
+
+the loss is -log(output)* reward = .31326166, for rewarded weight is .31318933, for neg reward = -.313334
+
+rewarded weight goes from 1 to 1.00026894

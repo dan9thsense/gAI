@@ -39,12 +39,28 @@ class Agent():
         #them with more long-winded code
         '''
 
-        hidden = self.nn_layer(self.state_in, numberOfStates, numHiddenLayerNeurons, 'hidden_layer', tf.nn.relu)
-        self.output = self.nn_layer(hidden, numHiddenLayerNeurons, numberOfActions, 'output_layer', tf.nn.softmax)
+        #hidden is a function that takes input as a vector of length numberOfStates
+        #multiplies it by the weights matrix (numberofStates x numHiddenLayerNeurons),
+        #adds the biases, applies the relu activation function
+        #and returns a vector of length numHiddenLayerNeurons
+        #with values that correspond to the results.
+        #it is evaluated using sess.run and we will send those outputs to the next layer
+        #hidden = self.nn_layer(self.state_in, numberOfStates, numHiddenLayerNeurons, 'hidden_layer', tf.nn.sigmoid)
 
-        #self.chosenAction = tf.argmax(self.output,1, name="chosenAction")
+        #self.output is a function just like hidden, where we take the results from hidden
+        #as inputs, evaluate it with sess.run, and produce a vector of length numberOfActions
+        #We could use the action that corresponds to the maximum value of that output
+        #but we get better results by using a probabalistic approach
+        #We will use the output vector as a set of probabilities, then choose which entry
+        #to use based on those probabilities.  If the results are narrowly distributed around a
+        #particular output, as it will be late in training, then that output is highly likely to get chosen.
+        #If the distribution
+        #is broad, as it will be early in training, then we have a greater chance of picking some
+        #other value.  Once we pick the value to use, we find the corresponding index in the
+        #vector and that is our chosen action.
+        #self.output = self.nn_layer(hidden, numHiddenLayerNeurons, numberOfActions, 'output_layer', tf.nn.softmax)
+        self.output = self.nn_layer(self.state_in, numberOfStates, numberOfActions, 'output_layer', tf.nn.sigmoid)
 
-        # We need to define the parts of the network needed for learning a policy
         #Tensor("Placeholder_1:0", shape=(?,), dtype=int32)
         self.reward_holder = tf.placeholder(shape=[None], dtype=tf.int32, name="reward_holder")
         self.action_holder = tf.placeholder(shape=[None], dtype=tf.int32, name="action_holder")
@@ -55,102 +71,124 @@ class Agent():
 
         with tf.name_scope('selected_output'):
             #Tensor("Gather:0", shape=(?,), dtype=float32)
-            self.selected_output = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
+            self.selected_output = tf.clip_by_value(tf.gather(tf.reshape(self.output, [-1]), self.indexes), 1e-20, 1.0)
+            #since self.selected_output is used in a log function,
+            #we avoid NaN by clipping when value in self.selected_output becomes zero
 
         with tf.name_scope('loss'):
             self.loss = -tf.reduce_mean(tf.log(self.selected_output) * tf.to_float(self.reward_holder))
-            #tf.summary.scalar('loss', self.loss)
 
         with tf.name_scope('trainable_vars'):
-            # specify the trainable variables for later updating
-            tvars = tf.trainable_variables()
+            # specify the trainable variables for later updating.
+            # index [0] is weights (numStates x numHiddenLayerNeurons), index [1] is biases (numHiddenLayerNeurons,)
+            # for the hidden layer.
+            # index[2] is weights (numHiddenLayerNeurons x numActions), index [3] is biases (numActions,)
+            # for the output layer
+            self.tvars = tf.trainable_variables()
 
+
+        #we have a gradient holder for each trainable variable
+        #data over time.  The gradients calculated as we do this are stored in self.gradient_holders
+        #self.gradient.holders will be size: (tvars size) x numberOfActions x numHiddenNeurons
         self.gradient_holders = []
-        for idx, var in enumerate(tvars):
+
+        #we create a placeholder for each of the trainable variables, in our case, four:
+        #weight and bias for the hidden and output layers
+        #the order is [0] = hidden layer weight, [1] = hidden layer bias, [2] output layer weight [3] output bias
+        #and append them to gradient_holders
+        for idx, var in enumerate(self.tvars):
             placeholder = tf.placeholder(tf.float32, name=str(idx)+'_holder')
             self.gradient_holders.append(placeholder)
 
         #compute the gradients
-        self.gradients = tf.gradients(self.loss, tvars)
+        self.gradients = tf.gradients(self.loss, self.tvars)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=learningRate)
-        self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, tvars))
+        self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders, self.tvars))
 
     # We can't initialize these variables to 0 - the network will get stuck.
     def weight_variable(self, shape):
-        #Create a weight variable with appropriate initialization.
+        #Called from nn_layer to create a weight variable with appropriate initialization.
         initial = tf.truncated_normal(shape, stddev=0.1)
         return tf.Variable(initial)
 
     def bias_variable(self, shape):
-        """Create a bias variable with appropriate initialization."""
+        #Called from nn_layer to create a bias variable with appropriate initialization.
         initial = tf.constant(0.1, shape=shape)
         return tf.Variable(initial)
 
     def nn_layer(self, input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
-        """Reusable code for making a simple neural net layer.
-        It does a matrix multiply, bias add, and then uses ReLU to nonlinearize.
-        It also sets up name scoping so that the resultant graph is easy to read,
-        and adds a number of summary ops.
-        """
+        #make a simple neural net layer.
+        #takes an input vector of length input_dim
+        #It does a matrix multiply, bias add, and then uses an activation function (default is relu) to nonlinearize.
+        #It also sets up name scoping so that the resultant graph is easy to read,
+
         # Adding a name scope ensures logical grouping of the layers in the graph.
         with tf.name_scope(layer_name):
-            # This Variable will hold the state of the weights for the layer
+            #weights for the layer
             with tf.name_scope('weights'):
                 weights = self.weight_variable([input_dim, output_dim])
-                #self.variable_statistics(weights)
             with tf.name_scope('biases'):
                 biases = self.bias_variable([output_dim])
-                #self.variable_statistics(biases)
             with tf.name_scope('Wx_plus_b'):
+                #multiply the input tensor by the weights and add biases
                 preactivate = tf.matmul(input_tensor, weights) + biases
-                #tf.summary.histogram('pre_activations', preactivate)
+            with tf.name_scope('activation_fcn'):
+                #apply the activation function (default is relu)
                 activations = act(preactivate, name='activation')
-                #tf.summary.histogram('activations', activations)
+
+        #return an output vector function of length output_dim that will be evaluated with sess.run to provide
+        #an output vector of length output_dim with the results of act(Wx+b) in each entry
         return activations
 
 class mdpPolicyAgent(Responder):
     def __init__(self):
         Responder.__init__(self)
-        self.batch_size = 50
+        self.batch_size = 1
         self.gamma = 0.99
-        self.update_frequency = 5
+        self.numRewardsForUpdate = 1
         self.learningRate = 0.03
+        self.numHiddenNeurons = 1
         self.createGraph()
 
-
+    def discount_rewards(self, r, gamma=0.99):
         #Compute the discounted reward_signal
         #for i,val in enumerate(r) returns a list containing (counter, value) for each element of r
         #That list is used to compute a vector of values with length = length of r
         #Takes 1d float array of rewards and computes discounted reward
         #    e.g. f([1, 1, 1], 0.99) -> [1, 0.99, 0.9801]
-    def discount_rewards(self, r, gamma=0.99):
         #print("r =", r)
-        return np.array([val * (gamma ** i) for i, val in enumerate(r)])
+        dR = np.array([val * (gamma ** i) for i, val in enumerate(r)])
+        dR -= dR.mean()
+        if dR.std() != 0:
+            dR /= dR.std()
+        return dR
+
 
     def createGraph(self):
         #Clear the default graph stack and reset the global default graph.
         tf.reset_default_graph()
 
-        # Placeholders for our observations, outputs and rewards
-        #these are not tf placeholders
-        self.xs = np.empty(0).reshape(0, 1)
-        self.ys = np.empty(0).reshape(0, 1)
-        self.rewards = np.empty(0).reshape(0, 1)
+        #create the network
+        self.myAgent = Agent(numHiddenLayerNeurons=self.numHiddenNeurons, learningRate=self.learningRate,\
+            numberOfStates=self.numStates, numberOfActions=self.numActions)
 
-        self.myAgent = Agent(numHiddenLayerNeurons=100, learningRate=self.learningRate, numberOfStates=self.numStates, numberOfActions=self.numActions)
-
-        #The weights we will evaluate to look into the network
+        #The weights we will evaluate to look into the network, just using names that are clearer than tvar
         #tf.trainable... returns all variables created with trainable=True
-        self.hiddenLayerWeights = tf.trainable_variables()[0]
-        self.hiddenLayerBiases = tf.trainable_variables()[1]
+
+        self.hiddenLayerWeights = tf.trainable_variables()[0] #size (numStates, numHiddenLayerNeurons)
+        self.hiddenLayerBiases = tf.trainable_variables()[1]  #size (numHiddenLayerNeurons,)
+
+        #self.outputLayerWeights = tf.trainable_variables()[2] #size (numHiddenLayerNeurons, numActions)
+        #self.outputLayerBiases = tf.trainable_variables()[3]  #size (numActions,)
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
         if self.useTensorBoard:
             self.createTensorboardSummaries()
 
-        #Variable to call next(..) from the training generator. Calling the generator directly causes it to run from the start
+        #Variable to call next(..) from the training generator. Calling the generator directly causes
+        #the whole runNet() function to run from the start
         self.learner = self.runNet()
 
     def createTensorboardSummaries(self):
@@ -168,11 +206,11 @@ class mdpPolicyAgent(Responder):
         #end of variable statistics
 
         with tf.name_scope('mdpPolicy'):
-            variable_statistics(self.hiddenLayerWeights, 'hidden_layer')
-            tf.summary.histogram('zeroed_weights_mdpPolicy', 0.99 - self.hiddenLayerWeights)
-            tf.summary.histogram('biases_mdpPolicy', self.hiddenLayerBiases)
-            tf.summary.histogram('action_mdpPolicy', self.myAgent.action_holder)
-            tf.summary.histogram("reward_mdpPolicy", self.myAgent.reward_holder)
+            #variable_statistics(self.hiddenLayerWeights, 'hidden_layer')
+            tf.summary.histogram('zeroed_weights_mdpPolicy', 0.99 - self.hiddenLayerWeights[self.action])
+            #tf.summary.histogram('biases_mdpPolicy', self.hiddenLayerBiases)
+            #tf.summary.histogram('action_mdpPolicy', self.myAgent.action_holder)
+            #tf.summary.histogram("reward_mdpPolicy", self.myAgent.reward_holder)
             #tf.summary.scalar('selectedOutput_mdpPolicy', self.myAgent.selected_output[0])
             #tf.summary.histogram("output_mdpPolicy", self.myAgent.output)
             #tf.summary.scalar("loss_mdpPolicy", self.myAgent.loss[0])
@@ -181,10 +219,10 @@ class mdpPolicyAgent(Responder):
             tf.summary.scalar('current_reward', self.currentReward)
             tf.summary.scalar('current_action', self.currentAction)
 
-
+        #merge all the summaries
         self.merged = tf.summary.merge_all()
         # Launch the tensorflow graph
-        self.writer = tf.summary.FileWriter("output/agent", self.sess.graph)
+        self.writer = tf.summary.FileWriter("output/mdpPolicy", self.sess.graph)
     #end of createTensorboardSummaries
 
     def getOutput(self):
@@ -206,20 +244,38 @@ class mdpPolicyAgent(Responder):
                 return next(self.learner)
 
     def runNet(self):
-        merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter("output/mdpPolicy", self.sess.graph)
+        #calculate the values for weights and biases in both layers into gradBuffer, just to establish
+        #the first dimension of gradBuffer as (trainable_variables (4 in our case))
+        # and the other dimensions as specified earlier
+        #in our case,
+        #gradBuffer[0] holds the weights for the hidden layer, so is size (numStates, numHiddenLayerNeurons)
+        #gradBuffer[1] holds the biases for the hidden layer, so is size (numHiddenLayerNeurons,)
+        #gradBuffer[2] holds the weights for the output layer, so is size (numHiddenLayerNeurons, numActions)
+        #gradBuffer[3] holds the biases for the hidden layer, so is size (numActions,)
         gradBuffer = self.sess.run(tf.trainable_variables())
+        #zero out all the entries in gradBuffer
         for ix,grad in enumerate(gradBuffer):
             gradBuffer[ix] = grad * 0
+
         counter = 0
-        summaryCounter = 0
-        ep_history = []
+        summaryCounter = 0 #count the tensorflow summary writes
+        ep_history = [] #we will store the past states, actions, and rewards with this list
+        rewardsArray = np.empty(0).reshape(0, 1) #an extra list of rewards, used for calculating the discounted rewards
+        positive_reward_sum = 0
+        gradsCalculated = 0
+        gradsUpdated = 0
+
         while True:
+            print(counter, self.globalCounter)
+            self.globalCounter += 1
+            counter += 1
             # first check if the call came from reset or done
             if self.done:
                 print("done called in mdpPolicyWithTB, exiting tf session")
-                writer.flush()
-                writer.close()
+                print('number of times grads calculated = ', gradsCalculated, 'grads updated: ', gradsUpdated)
+                if self.useTensorBoard:
+                    self.writer.flush()
+                    self.writer.close()
                 self.sess.close()
                 return
 
@@ -228,46 +284,69 @@ class mdpPolicyAgent(Responder):
                 self.sess.run(tf.global_variables_initializer())
                 self.resetVariables = False
 
-            #Probabilistically pick an action given our network outputs.
-            #generate a vector of length numActions, where each entry is the probability of picking that entry
+            self.currentState = 0   #always input character 'a'
+            #take the character that is input and process it to one_hot encoding ready to go into the hidden layer
             stateRS = self.sess.run(self.myAgent.state_in_rs, feed_dict={self.myAgent.charIndex:[self.currentState]})
-            output_dist, hiddenWeights, hiddenBiases = self.sess.run([self.myAgent.output, self.hiddenLayerWeights, \
-                self.hiddenLayerBiases], feed_dict={self.myAgent.state_in:stateRS})
 
-            # , self.myAgent.loss, self.hiddenLayerWeights], \
-            #pick an entry and return its value
-            selectedWeight = np.random.choice(output_dist[0],p=output_dist[0])
+            #Take the input, calculate act(Wx+b) for both layer and provide an output vector
+            #Then use that vector (output_dist) to probabilistically pick an action.
+            #output_dist is a vector of length numActions. We use each entry as the probability of picking that entry
+            #then choose which entry to use based on those probabilities.
+            #If the results are narrowly distributed around a particular entry, as they will be late in training,
+            #then that output is highly likely to get chosen.  If the distribution
+            #is broad, as it will be early in training, then we have a greater chance of picking some
+            #other value.  Once we pick the value to use, we find the corresponding index in the
+            #vector and that is our chosen action.
+
+            #output_dist, hiddenWeights, hiddenBiases = self.sess.run([self.myAgent.output, self.hiddenLayerWeights, \
+            #    self.hiddenLayerBiases], feed_dict={self.myAgent.state_in:stateRS})
+
+            output_dist = self.sess.run(self.myAgent.output, feed_dict={self.myAgent.state_in:stateRS})
+
+            #this uses output_dist as a set of probabilities.  Using those values as weights,
+            # it selects an entry in ouput_dist. So the weight most likely to be selected is the highest weight
+            #but overall things depend on the shape of the distribtion.
+            #selectedWeight = np.random.choice(output_dist[0],p=output_dist[0])
             #find the index of the value chosen
-            self.action = np.argmax(output_dist == selectedWeight)
+            #this finds the argument in output_dist where the entry = selectedWeight
+            #if there is no match, it returns 0 (character 'a')
+            #self.action = np.argmax(output_dist == selectedWeight)
+
+            #could make it not random, but you can get locked in where the initial values do not generate
+            #a reward, so the net never updates and you just keep sending the same subset of characters
+            self.action = np.argmax(output_dist)
 
             #oneHot = self.sess.run(self.myAgent.state_in_OH, feed_dict={self.myAgent.charIndex:[self.currentState]})
             #stateIn =  self.sess.run(self.myAgent.state_in, feed_dict={self.myAgent.charIndex:[self.currentState]})
             #self.action = self.sess.run(self.myAgent.chosenAction, feed_dict={self.myAgent.state_in:stateIn})
             #self.action = self.sess.run(self.myAgent.chosenAction, feed_dict={self.myAgent.charIndex:[self.currentState]})
             self.previousState = self.currentState
-            #print(self.action)
-            #summary = self.sess.run([self.myAgent.merged], feed_dict={self.myAgent.charIndex:[self.currentState], self.myAgent.state_in:stateRS})
-            #writer.add_summary(summary, counter)
 
             yield self.characters[self.action]
+            self.currentState = 0
+            self.reward = 1
+            #we sent off the action and there is now a reward and a new currentState
+            #we will save the state which we acted upon (stateRS), the action, the reward, and the new currentState
             ep_history.append([stateRS,self.action,self.reward,self.currentState])
-            self.rewards = np.vstack([self.rewards, self.reward])
-            #print("lengths = ", len(self.rewards), len(ep_history))
-            #print("values = ", self.rewards, ep_history)
-            #self.rewards.append(self.reward)
 
-            ep_history_array = np.array(ep_history)
+            #and we also save the rewards in its own array
+            rewardsArray = np.vstack([rewardsArray, self.reward])
             if self.reward == 1:
+                positive_reward_sum += 1
+
+            #put ep_history into an array for processing below
+            ep_history_array = np.array(ep_history)
+
+            if positive_reward_sum >= 0: #self.numRewardsForUpdate:
                 #Update the network.
                 #print("ep_history: ", ep_history[:,2])
                 #ep_history[:,2] = self.discount_rewards(ep_history[:,2])
-                # Determine standardized rewards
-                #print("rewards = ", self.rewards)
-                #discounted_rewards = np.array([val * (self.gamma ** i) for i, val in enumerate(self.rewards)])
-                discounted_rewards = np.array([val * (self.gamma ** i) for i, val in enumerate(self.rewards)])
-                #discounted_rewards = self.discount_rewards(self.rewards)
-                discounted_rewards -= discounted_rewards.mean()
-                discounted_rewards /= discounted_rewards.std()
+
+                #run the list of rewards through to discount older ones
+                #discounted_rewards = np.array([val * (self.gamma ** i) for i, val in enumerate(rewardsArray)])
+                discounted_rewards = self.discount_rewards(rewardsArray)
+                #discounted_rewards -= discounted_rewards.mean()
+                #discounted_rewards /= discounted_rewards.std()
                 #print(discounted_rewards.shape)
                 #print(ep_history_array[:,2].shape)
                 #print(ep_history_array[:,2])
@@ -277,15 +356,49 @@ class mdpPolicyAgent(Responder):
                 #print(reshapeDR)
                 ep_history_array[:,2] = self.sess.run(reshapeDR)
                 #print(ep_history_array[:,2])
+
+                #create the feeder with the states we acted on, the actions, and the discounted rewards
                 gradFeeder={self.myAgent.reward_holder:ep_history_array[:,2], \
                     self.myAgent.action_holder:ep_history_array[:,1], \
                     self.myAgent.state_in:np.vstack(ep_history_array[:,0])}
 
-                grads, loss, selOut = self.sess.run([self.myAgent.gradients, self.myAgent.loss, \
-                    self.myAgent.selected_output], feed_dict=gradFeeder)
+                #calculate the gradients and some others for use with tensorboard
+                grads, loss, selOut, tvarsValues = self.sess.run([self.myAgent.gradients, self.myAgent.loss, \
+                    self.myAgent.selected_output, self.myAgent.tvars], feed_dict=gradFeeder)
+                #print('hidden weights = ', tvarsValues[0])
 
+                #print('tvars sizes = ', tf.shape(self.myAgent.tvars[0]), tf.shape(self.myAgent.tvars[1]),\
+                #    tf.shape(self.myAgent.tvars[2]), tf.shape(self.myAgent.tvars[3]))
+
+                #print('tvars0Values = ', tvarsValues[0], 'len = ', len(tvarsValues[0]))
+                #maxHiddenWeightIndex = np.argmax(tvarsValues[0])
+                #print('argmax hidden weights = ', maxHiddenWeightIndex)
+                #hw = np.array(tvarsValues[0])
+                #tf.reshape(hw,[-1])
+                #print('hidden max index = ', maxHiddenWeightIndex, ' value = ', hw[maxHiddenWeightIndex] )
+                #print('tvars1Values = ', tvarsValues[1], 'len = ', len(tvarsValues[1]))
+                #print('tvars2Values = ', tvarsValues[2][0][self.action], 'len = ', len(tvarsValues[2][0]))
+                print('hidden weight = ', tvarsValues[0][self.previousState][self.action])
+                print('input = ', self.previousState, 'output = ', self.action)
+                print('tvars0 = ', tvarsValues[0][0])
+                #print('output weight = ', tvarsValues[2][0][self.action], ' index = ', self.action)
+                #print('tvars3Values = ', tvarsValues[3], 'len = ', len(tvarsValues[3]))
+                '''
+                maxOutputWeightIndex = np.argmax(tvarsValues[2])
+                print('argmax output weights = ', maxOutputWeightIndex)
+                w = np.array(tvarsValues[2])
+                tf.reshape(w,[-1])
+                print('output max index = ', maxOutputWeightIndex, ' value = ', w[maxOutputWeightIndex] )
+                '''
+                #add these gradients to gradBuffer
                 for idx,grad in enumerate(grads):
                     gradBuffer[idx] += grad
+
+                rewardsArray = np.empty(0).reshape(0, 1)
+                positive_reward_sum = 0
+                ep_history = []
+                gradsCalculated += 1
+                print('mdpPolicy gradients calculated')
 
                 '''
                 indexes = self.sess.run(self.myAgent.indexes, \
@@ -300,26 +413,42 @@ class mdpPolicyAgent(Responder):
                     self.myAgent.action_holder:ep_history_array[:,1]})
                 '''
 
-                if counter % self.update_frequency == 0 and counter != 0:
-                    feed_dict= dictionary = dict(zip(self.myAgent.gradient_holders, gradBuffer))
-                    _ = self.sess.run(self.myAgent.update_batch, feed_dict=feed_dict)
+                #if we have reached the batch_size, update the network with the saved gradients
+                if counter % self.batch_size == 0 and counter != 0:
+                    #zip converts a tuple of sequences to a sequence of tuples. dict makes it a dictionary
+                    #keys = ['a', 'b', 'c'] values = [1, 2, 3]
+                    #zip(keys,values) outputs [('a', 1), ('b', 2), ('c', 3)]
+                    #dictionary = dict(zip(keys, values)) outputs  {'a': 1, 'b': 2, 'c': 3}
+                    #create the feeder, pugging in gradBuffer
+                    updateFeeder = dict(zip(self.myAgent.gradient_holders, gradBuffer))
+
+                    #update the network weights and biases
+                    _, tvarsUpdated = self.sess.run([self.myAgent.update_batch, self.myAgent.tvars], feed_dict=updateFeeder)
+
+
+                    #print('gradBuffer = ', len(gradBuffer), len(gradBuffer[0]), len(gradBuffer[1]))
+
+                    #zero out the gradBuffer to get ready to take in the next batch of gradients
                     for ix,grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
-            #end of if reward == 1
+                    print('mdpPolicy gradients updated')
+                    gradsUpdated += 1
+                 #end of if counter % self.batch.....
+            #end of if reward >= self.numRewardsForUpdate
 
             if self.useTensorBoard:
                 summaryFeeder = {self.myAgent.reward_holder:ep_history_array[:,2], \
                     self.myAgent.action_holder:ep_history_array[:,1], \
-                    self.hiddenLayerWeights:hiddenWeights, self.hiddenLayerBiases:hiddenBiases, \
+                    self.hiddenLayerWeights:tvarsValues[0],\
+                    self.hiddenLayerBiases:tvarsValues[1], \
                     self.currentReward:self.reward, self.currentAction:self.action}
                     #self.myAgent.loss:loss, \
                     #self.myAgent.output:output_dist, self.myAgent.selected_output:selOut, \
 
-                summaryMerged = self.sess.run(merged, feed_dict=summaryFeeder)
-                writer.add_summary(summaryMerged, summaryCounter)
+                summaryMerged = self.sess.run(self.merged, feed_dict=summaryFeeder)
+                self.writer.add_summary(summaryMerged, summaryCounter)
                 summaryCounter += 1
-            counter += 1
-
+            #end of if self.useTensorBoard
         #end of while True
         if self.useTensorBoard:
             self.writer.flush()

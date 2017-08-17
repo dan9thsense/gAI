@@ -27,21 +27,21 @@ class Responder:
         self.resetVariables = False
         self.done = False
         self.numResets = 0
+        self.globalCounter = 0
         self.numActions = len(self.characters)
         self.numStates = len(self.characters)
         self.initialRandomActionProbability = 0.02
         self.e = self.initialRandomActionProbability
-        self.learningRate = 0.001
+        self.learningRate = 0.1
         self.totalReward = 0
         self.rewardList = []
         self.currentState = 0
         self.previousState = 0
         self.reward = 0
         self.action = 0
-        self.recordRewards = False
         self.plotResults = False
         self.useTensorBoard = False
-        self.saveModels = True
+        self.saveModels = False
         self.loadModels = False
 
     def initializeValues(self):
@@ -61,7 +61,7 @@ class Responder:
     def rewardIn(self, reward):
         self.reward = reward
         self.totalReward += self.reward
-        if self.recordRewards:
+        if self.plotResults:
             self.rewardList.append(self.reward)
 
     def charOut(self, charIn):
@@ -78,7 +78,7 @@ class Responder:
         return self.outputCharacter
 
     def plotReward(self, learnerName):
-        if len(self.rewardList) > 2 and self.recordRewards and self.plotResults:
+        if len(self.rewardList) > 2 and self.plotResults:
             print("plotting rewardList.  Its length = ", len(self.rewardList))
             plt.plot(self.rewardList)
             plt.title(learnerName)

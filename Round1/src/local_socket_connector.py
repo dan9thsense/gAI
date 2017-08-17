@@ -37,7 +37,7 @@ print("Connecting to %s" % address)
 sys.stdout.flush()
 
 socket.connect(address)
-socket.send_string("hello")
+socket.send_string("h") #ello")
 
 
 def disconnect():

@@ -156,7 +156,7 @@
       "type": "core.scheduler.ConsecutiveTaskScheduler",
       "args": {
           "tasks": [
-            "micro5.1"],
+            "micro3"],
           "success_threshold": 5
         }
     }

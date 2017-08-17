@@ -91,7 +91,7 @@ class MicroBase(Task):
         self.questions_asked += 1
 
     def check_if_task_instance_finished(self):
-        #return False
+        return False
         if self.agent_solved_instance_under_time_limit():    # agent solved instance in time
             self.set_result(True, provide_result_as_reward=False)
             return True

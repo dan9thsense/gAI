@@ -1,11 +1,11 @@
 
 # coding: utf-8
 
-# # Simple Reinforcement Learning in Tensorflow Part 2-b: 
+# # Simple Reinforcement Learning in Tensorflow Part 2-b:
 # ## Vanilla Policy Gradient Agent
 # This tutorial contains a simple example of how to build a policy-gradient based agent that can solve the CartPole problem. For more information, see this [Medium post](https://medium.com/@awjuliani/super-simple-reinforcement-learning-tutorial-part-2-ded33892c724#.mtwpvfi8b). This implementation is generalizable to more than two actions.
-# 
-# For more Reinforcement Learning algorithms, including DQN and Model-based learning in Tensorflow, see my Github repo, [DeepRL-Agents](https://github.com/awjuliani/DeepRL-Agents). 
+#
+# For more Reinforcement Learning algorithms, including DQN and Model-based learning in Tensorflow, see my Github repo, [DeepRL-Agents](https://github.com/awjuliani/DeepRL-Agents).
 
 # In[6]:
 
@@ -15,7 +15,7 @@ import tensorflow.contrib.slim as slim
 import numpy as np
 import gym
 import matplotlib.pyplot as plt
-get_ipython().magic(u'matplotlib inline')
+#get_ipython().magic(u'matplotlib inline')
 
 try:
     xrange = xrange
@@ -61,20 +61,20 @@ class agent():
         #to compute the loss, and use it to update the network.
         self.reward_holder = tf.placeholder(shape=[None],dtype=tf.float32)
         self.action_holder = tf.placeholder(shape=[None],dtype=tf.int32)
-        
+
         self.indexes = tf.range(0, tf.shape(self.output)[0]) * tf.shape(self.output)[1] + self.action_holder
         self.responsible_outputs = tf.gather(tf.reshape(self.output, [-1]), self.indexes)
 
         self.loss = -tf.reduce_mean(tf.log(self.responsible_outputs)*self.reward_holder)
-        
+
         tvars = tf.trainable_variables()
         self.gradient_holders = []
         for idx,var in enumerate(tvars):
             placeholder = tf.placeholder(tf.float32,name=str(idx)+'_holder')
             self.gradient_holders.append(placeholder)
-        
+
         self.gradients = tf.gradients(self.loss,tvars)
-        
+
         optimizer = tf.train.AdamOptimizer(learning_rate=lr)
         self.update_batch = optimizer.apply_gradients(zip(self.gradient_holders,tvars))
 
@@ -100,11 +100,11 @@ with tf.Session() as sess:
     i = 0
     total_reward = []
     total_lenght = []
-        
+
     gradBuffer = sess.run(tf.trainable_variables())
     for ix,grad in enumerate(gradBuffer):
         gradBuffer[ix] = grad * 0
-        
+
     while i < total_episodes:
         s = env.reset()
         running_reward = 0
@@ -134,12 +134,12 @@ with tf.Session() as sess:
                     _ = sess.run(myAgent.update_batch, feed_dict=feed_dict)
                     for ix,grad in enumerate(gradBuffer):
                         gradBuffer[ix] = grad * 0
-                
+
                 total_reward.append(running_reward)
                 total_lenght.append(j)
                 break
 
-        
+
             #Update our running tally of scores.
         if i % 100 == 0:
             print(np.mean(total_reward[-100:]))
@@ -153,7 +153,3 @@ with tf.Session() as sess:
 
 
 # In[ ]:
-
-
-
-

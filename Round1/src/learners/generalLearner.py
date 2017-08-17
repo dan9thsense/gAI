@@ -18,6 +18,7 @@ from learners import q_no_state_policyWithTB
 from learners import agentWithTB
 from learners import mdpPolicyWithTB
 from learners import agentMinimalTrainedRepeater
+from learners import two_layers
 
 
 # when testing stand-alone
@@ -44,12 +45,12 @@ class GeneralLearner():
         self.maxNumFailures = 1000
         self.steps = 0
         self.numTries = 0
-        self.maxTries = 10000
+        self.maxTries = 100
         self.learner = my_learners
         self.repeater = self.learner.Repeater()
         self.randomChar = self.learner.RandomCharacter()
         self.alphaNumeric = self.learner.alphaNumeric()
-        self.inputOutputFeedback = self.learner.InputOutputFeedback()
+        #self.inputOutputFeedback = self.learner.InputOutputFeedback()
         self.alphaNumericIOFeedback = self.learner.AlphaNumericIOFeedback()
         #self.rnn_learner = rnn_learner.myRNN()
         #self.qLearner = q_learner.myQ()
@@ -57,18 +58,23 @@ class GeneralLearner():
         self.q_NoState = q_no_state_policyWithTB.NoStatePolicy()
         self.agent1 = agentWithTB.simpleAgent()
         self.mdpAgent = mdpPolicyWithTB.mdpPolicyAgent()
+        self.twoLayers = two_layers.simpleAgent()
         self.trainedRepeater = agentMinimalTrainedRepeater.simpleAgent()
 
         # list of the learners with the max number of allowed failures for each
         # and slots for the number of tasks solved and the number of tasks failed for each
         self.learnerList = [\
+            [self.twoLayers, 500000, 0, 0, 'twoLayers'],\
+            [self.mdpAgent, 500000, 0, 0, 'mdpAgent'],\
             [self.q_NoState, 71, 0, 0, 'q_NoState_task1'],\
             [self.alphaNumeric, 15, 0, 0, 'AlphaNumeric_task2'],\
             [self.trainedRepeater, 5, 0, 0, 'trainedRepeater_task4'],\
-            [self.alphaNumericIOFeedback, 20, 0, 0, 'aNioFeedback_task5_2']\
+            [self.alphaNumericIOFeedback, 20, 0, 0, 'aNioFeedback_task5_2'],\
+            [self.agent1, 300, 0, 0, 'agent1_task3'],\
+            #[self.twoLayers, 500000, 0, 0, 'twoLayers'],\
             #[self.inputOutputFeedback, 20, 0, 0, 'ioFeedback_task5_1'],\
             #[self.agent1, 300, 0, 0, 'agent1_task3'],\
-            #[self.mdpAgent, 300, 0, 0, 'mdpAgent'],\
+            #[self.mdpAgent, 500000, 0, 0, 'mdpAgent'],\
             #[self.randomChar, 71, 0, 0, 'Random Character_task1'],\
             #[self.repeater, 3, 0, 0, 'Repeater'],\
             ]
