@@ -22,38 +22,52 @@ def generateData():
 
     return (x, y)
 
+#input will be floats, size (batch_size, truncated_backprop_length) e.g., 5 x 15
 batchX_placeholder = tf.placeholder(tf.float32, [batch_size, truncated_backprop_length])
+#labels will be ints, size (batch_size, truncated_backprop_length) e.g., 5 x 15
 batchY_placeholder = tf.placeholder(tf.int32, [batch_size, truncated_backprop_length])
 
+#an individual state is size (batch_size, state_size), e.g. 5 x 4
 init_state = tf.placeholder(tf.float32, [batch_size, state_size])
 
+#populate W with random uniformly distributed entries
+#W has rows = state_size+1 because the input is concatenated with the current state, so it has state_size+1 columns
 W = tf.Variable(np.random.rand(state_size+1, state_size), dtype=tf.float32)
 b = tf.Variable(np.zeros((1,state_size)), dtype=tf.float32)
 
 W2 = tf.Variable(np.random.rand(state_size, num_classes),dtype=tf.float32)
 b2 = tf.Variable(np.zeros((1,num_classes)), dtype=tf.float32)
 
-# Unpack columns
-inputs_series = tf.unstack(batchX_placeholder, axis=1)
+# unstack columns, now we will have 15 vectors, with 5 entries each
+inputs_series = tf.unstack(batchX_placeholder, axis=1) #
 labels_series = tf.unstack(batchY_placeholder, axis=1)
 
 # Forward pass
-current_state = init_state
+current_state = init_state #an individual state is size (batch_size, state_size), e.g. 5 x 4
 states_series = []
-for current_input in inputs_series:
+for current_input in inputs_series: #15 sets with 5 points each
+    #send in a size (5,) get out size (5,1)
+    #remember, np.array([1,2,3]).shape = (3,) while np.array([[1],[2],[3]]).shape = (3,1)
     current_input = tf.reshape(current_input, [batch_size, 1])
+    #send in size (5,1) and (5,4) get out size (5,5) This is state_size+1 number of columns
     input_and_state_concatenated = tf.concat([current_input, current_state], 1)  # Increasing number of columns
 
+    #calculate activationFunction(Wx +b) for the hidden layer, this is next_state for the hidden layer
     next_state = tf.tanh(tf.matmul(input_and_state_concatenated, W) + b)  # Broadcasted addition
     states_series.append(next_state)
     current_state = next_state
 
+#calculate W2x + b for every state we have produced
 logits_series = [tf.matmul(state, W2) + b2 for state in states_series] #Broadcasted addition
+#run the logits through the softmax activation, so we get outputs that are probabilities
 predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
 
+#use logits and labels to calculate losses for each state we have produced
 losses = [tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels) for logits, labels in zip(logits_series,labels_series)]
+#get the mean of the losses over all the states we produced
 total_loss = tf.reduce_mean(losses)
 
+#minimize that loss to train the net
 train_step = tf.train.AdagradOptimizer(0.3).minimize(total_loss)
 
 def plot(loss_list, predictions_series, batchX, batchY):
@@ -84,18 +98,19 @@ with tf.Session() as sess:
     plt.show()
     loss_list = []
 
-    for epoch_idx in range(num_epochs):
+    for epoch_idx in range(num_epochs): #0 to 100
         x,y = generateData()
-        _current_state = np.zeros((batch_size, state_size))
+        _current_state = np.zeros((batch_size, state_size)) #_current_state starts with all 0's
 
         print("New data, epoch", epoch_idx)
 
-        for batch_idx in range(num_batches):
-            start_idx = batch_idx * truncated_backprop_length
-            end_idx = start_idx + truncated_backprop_length
+        for batch_idx in range(num_batches): #0 to 666
+            start_idx = batch_idx * truncated_backprop_length #for idx=100, start_idx = 1500
+            end_idx = start_idx + truncated_backprop_length     #for idx=100, end_idx=1515
 
-            batchX = x[:,start_idx:end_idx]
-            batchY = y[:,start_idx:end_idx]
+            #take all 5 rows along with columns 1500 to 1515
+            batchX = x[:,start_idx:end_idx] #inputs
+            batchY = y[:,start_idx:end_idx] #labels
 
             _total_loss, _train_step, _current_state, _predictions_series = sess.run(
                 [total_loss, train_step, current_state, predictions_series],
