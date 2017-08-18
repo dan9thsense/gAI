@@ -79,13 +79,22 @@ predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
 actions = tf.slice(predictions_series,[0,0,0],[15,5,2])
 actions = tf.reshape(actions, [75,2])
 actions = tf.argmax(actions, 1)
-actions = tf.cast(actions, tf.float32)
+actions = tf.cast(actions, tf.int32)
 actions = tf.reshape(actions, [1,75])
 reward_pl = tf.placeholder(tf.float32,shape=[1,75])
-losses1 = tf.multiply(actions, reward_pl)
-total_loss1 = tf.reduce_mean(losses1)
+#losses1 = tf.multiply(actions, reward_pl)
 #losses = predictions_series * answer_var
-
+logits_loss = tf.slice(logits_series,[0,0,0],[15,5,2])
+logits_loss = tf.reshape(logits_loss, [75,2])
+#selected_logits = tf.slice(logits_loss,[0,1],[75,1])
+selected_logits = []
+for i in range(75):
+    selected_logits.append(logits_loss[i][actions[0][i]])
+#selected_logits = tf.reshape(selected_logits [75, -1])
+rewards_loss = tf.reshape(reward_pl,[75,1])
+selected_logits = tf.reshape(selected_logits,[75,1])
+losses1 = tf.multiply(selected_logits, rewards_loss)
+total_loss1 = tf.reduce_mean(losses1)
 
 #reward += np.dot(single_output_series,answer)
 """
@@ -158,7 +167,7 @@ with tf.Session() as sess:
             batchX = x[:,start_idx:end_idx] #inputs
             batchY = y[:,start_idx:end_idx] #answers
 
-            _predictions_series = sess.run(predictions_series,
+            _predictions_series, _logits_series = sess.run([predictions_series, logits_series],
                  feed_dict={
                      batchX_placeholder:batchX,
                      batchY_placeholder:batchY,
@@ -172,28 +181,35 @@ with tf.Session() as sess:
                 #print('answer = ', answer)
                 for i in range(len(single_output_series)):
                  if single_output_series[i] == answer[i]:
-                     reward = 1
+                     reward = -1
                  else:
-                     reward = 0
+                     reward = 1
                  #print('single_output_series[i] = ', single_output_series[i])
                  #print('answer[i] = ', answer[i])
                  #print('i, reward = ', i, reward)
                  reward_series.append(reward)
             #print('reward series = ', reward_series)
             #reward_series = tf.shape(reward_series,[75,1])
-            _losses1, _total_loss1, _total_loss, _current_state, _predictions_series, _logits_series, _actions = sess.run(
-                [losses1, total_loss1, total_loss, current_state, predictions_series, logits_series, actions],
+            #print('logits = ', _logits_series)
+
+            _selected_logits, _losses1, _total_loss1, _total_loss, _current_state, _predictions_series, _logits_series, _actions = sess.run(
+                [selected_logits, losses1, total_loss1, total_loss, current_state, predictions_series, logits_series, actions],
                 feed_dict={
                     batchX_placeholder:batchX,
                     batchY_placeholder:batchY,
                     init_state:_current_state,
                     reward_pl:[reward_series]
                 })
+            """
             #print('prediction_series = ', _predictions_series[0][0][0], _predictions_series[0][0][1] )
             #print('actions = ', _actions)
-            print('losses = ', _losses1)
+            print('selected_logits = ', _selected_logits)
+            print('selected_logits shape = ', np.array(_selected_logits).shape)
+            print('rewards_series shape = ', np.array(reward_series).shape)
+            print('losses1 = ', _losses1)
             print('total_loss = ', _total_loss1)
             exit()
+            """
             _train_step = sess.run(train_step,
                 feed_dict={
                     batchX_placeholder:batchX,
